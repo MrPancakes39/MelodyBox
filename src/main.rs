@@ -1,20 +1,28 @@
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
 const API_BASE: &str = "https://piped-api.privacy.com.de";
 
-use serde::Deserialize;
+use serde::{de::Error, Deserialize};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct AudioStream {
     pub url: String,
     pub format: String,
-    pub quality: String,
+    pub bitrate: i32,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct PipedResponse {
+struct SongInfo {
+    title: String,
     audio_streams: Vec<AudioStream>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum PipedResponse {
+    Success(SongInfo),
+    Error { error: String },
 }
 
 async fn download_song(video_id: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -31,6 +39,7 @@ async fn download_song(video_id: &str) -> Result<(), Box<dyn std::error::Error>>
 }
 
 #[tokio::main]
-async fn main() {
-    download_song("HoBGWhapaho").await.unwrap();
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    download_song("HoBGWhapaho").await?;
+    Ok(())
 }
