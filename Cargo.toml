@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 color-eyre = "0.6.2"
+execute = "0.2.12"
 reqwest = { version = "0.11.18", features = ["json"] }
 serde = { version = "1.0.176", features = ["derive"] }
 thiserror = { version = "1.0.44" }

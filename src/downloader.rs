@@ -1,10 +1,10 @@
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
 const API_BASE: &str = "https://piped-api.privacy.com.de";
 
+use crate::FFMPEG_PATH;
+use execute::Execute;
 use serde::Deserialize;
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
+use std::process::Command;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -36,8 +36,10 @@ pub enum DownloadErrors {
     ParseError,
     #[error("API returned an Error")]
     ApiError(String),
-    #[error("No M4A Streams Available")]
+    #[error("No Audio Streams Available")]
     StreamError,
+    #[error("Failed to Download to File")]
+    DownloadFailed,
 }
 
 async fn get_stream_url(video_id: &str) -> Result<(String, String), DownloadErrors> {
@@ -63,9 +65,7 @@ async fn get_stream_url(video_id: &str) -> Result<(String, String), DownloadErro
     let best_stream = song_info
         .audio_streams
         .iter()
-        .filter(|s| s.format == "WEBMA_OPUS")
         .max_by(|s1, s2| s1.bitrate.cmp(&s2.bitrate));
-    dbg!(&best_stream);
     if best_stream.is_none() {
         return Err(DownloadErrors::StreamError);
     }
@@ -87,32 +87,29 @@ fn santize_title(title: &String) -> String {
         .collect::<String>()
 }
 
-async fn get_song(path: impl AsRef<Path>, url: String) -> Result<(), DownloadErrors> {
-    let client = reqwest::Client::new();
-    let resp = match client
-        .get(url)
-        .header("User-Agent", USER_AGENT)
-        .send()
-        .await
-    {
-        Err(err) => return Err(DownloadErrors::RequestError(err)),
-        Ok(res) => res,
-    };
-    let mut file = File::create(path).expect("Can create file");
-    let file_content = resp.bytes().await.expect("To be able to parse as bytes");
-    file.write_all(&file_content)
-        .expect("To be able to write to file");
-    Ok(())
+async fn get_song(path: &str, url: &str) -> Result<(), DownloadErrors> {
+    let mut cmd = Command::new(FFMPEG_PATH);
+    cmd.arg("-y"); // set overwrite output file to true
+    cmd.arg("-i"); // set input file
+    cmd.arg(url); // to url
+    cmd.arg("-loglevel"); // set logging level
+    cmd.arg("-24"); // to 24
+    cmd.arg("-sn"); // disable subtitle recording
+    cmd.arg("-c:a"); // sets audio codec
+    cmd.arg("mp3"); // to mp3
+    cmd.arg(path); // sets output file to path
+    cmd.execute_check_exit_status_code(0)
+        .map_err(|_| DownloadErrors::DownloadFailed)
 }
 
-pub async fn download_song(video_id: &str) -> Result<(), DownloadErrors> {
+pub async fn download_song(video_id: &str) -> Result<(String, String), DownloadErrors> {
     let (title, url) = match get_stream_url(video_id).await {
         Err(err) => return Err(err),
         Ok(tup) => tup,
     };
 
-    let file_path = format!("tmp/{}.webm", santize_title(&title));
-    get_song(file_path, url).await?;
+    let file_path = format!("tmp/{}.mp3", santize_title(&title));
+    get_song(&file_path, &url).await?;
 
-    Ok(())
+    Ok((title, file_path))
 }
