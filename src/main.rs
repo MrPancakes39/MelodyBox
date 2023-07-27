@@ -1,7 +1,8 @@
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
 const API_BASE: &str = "https://piped-api.privacy.com.de";
 
-use serde::{de::Error, Deserialize};
+use color_eyre::Result;
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -25,7 +26,7 @@ enum PipedResponse {
     Error { error: String },
 }
 
-async fn download_song(video_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn download_song(video_id: &str) -> Result<()> {
     let url = format!("{API_BASE}/streams/{video_id}");
     let client = reqwest::Client::new();
     let resp = client
@@ -39,7 +40,8 @@ async fn download_song(video_id: &str) -> Result<(), Box<dyn std::error::Error>>
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
+    color_eyre::install()?;
     download_song("HoBGWhapaho").await?;
     Ok(())
 }
