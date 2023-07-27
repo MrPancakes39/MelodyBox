@@ -13,7 +13,7 @@ const LYRICS_ID_JSON: &str = r#"{
     "context": {
         "client": {
             "clientName": "WEB_REMIX",
-            "clientVersion": "1.20230727.01.00",
+            "clientVersion": "1.DATE.01.00",
             "hl": "en"
         },
         "user": {}
@@ -22,13 +22,19 @@ const LYRICS_ID_JSON: &str = r#"{
 
 use crate::USER_AGENT;
 
-// struct
+fn get_body(video_id: &str) -> String {
+    use chrono::Utc;
+    LYRICS_ID_JSON
+        .replace("VIDEO_ID", video_id)
+        .replace("DATE", Utc::now().format("%Y%m%d").to_string().as_str())
+}
 
 pub async fn get_lyrics_browse_id(video_id: &str) -> color_eyre::Result<()> {
+    let body = get_body(video_id);
     let client = reqwest::Client::new();
     let resp = client
         .post("https://music.youtube.com/youtubei/v1/next?alt=json")
-        .body(LYRICS_ID_JSON.replace("VIDEO_ID", video_id))
+        .body(body)
         .header("User-Agent", USER_AGENT)
         .header("Content-Type", "application/json")
         .send()
