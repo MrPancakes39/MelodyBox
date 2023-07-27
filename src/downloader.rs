@@ -67,11 +67,30 @@ async fn get_stream_url(video_id: &str) -> Result<(String, String), DownloadErro
     Ok((song_info.title, best_stream.unwrap().url.clone()))
 }
 
+fn santize_title(title: &String) -> String {
+    // Windows not allowed chars in filename
+    let not_allowed = ['/', '<', '>', ':', '"', '\\', '|', '?', '*'];
+    title
+        .chars()
+        .map(|c| {
+            if c.is_whitespace() || not_allowed.contains(&c) {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect::<String>()
+        + ".mp3"
+}
+
 pub async fn download_song(video_id: &str) -> Result<(), DownloadErrors> {
     let (title, url) = match get_stream_url(video_id).await {
         Err(err) => return Err(err),
         Ok(tup) => tup,
     };
-    dbg!(title, url);
+    // dbg!(&title, &url);
+    let file_name = santize_title(&title);
+    dbg!(&file_name);
+
     Ok(())
 }
