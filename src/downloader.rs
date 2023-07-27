@@ -1,6 +1,10 @@
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
 const API_BASE: &str = "https://piped-api.privacy.com.de";
+
 use serde::Deserialize;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -80,7 +84,24 @@ fn santize_title(title: &String) -> String {
             }
         })
         .collect::<String>()
-        + ".mp3"
+}
+
+async fn get_song(path: impl AsRef<Path>, url: String) -> Result<(), DownloadErrors> {
+    let client = reqwest::Client::new();
+    let resp = match client
+        .get(url)
+        .header("User-Agent", USER_AGENT)
+        .send()
+        .await
+    {
+        Err(err) => return Err(DownloadErrors::RequestError(err)),
+        Ok(res) => res,
+    };
+    let file_content = resp.bytes().await.expect("To be able to parse as bytes");
+    let mut file = File::create(path).expect("Can create file");
+    file.write_all(&file_content)
+        .expect("To be able to write to file");
+    Ok(())
 }
 
 pub async fn download_song(video_id: &str) -> Result<(), DownloadErrors> {
@@ -88,9 +109,9 @@ pub async fn download_song(video_id: &str) -> Result<(), DownloadErrors> {
         Err(err) => return Err(err),
         Ok(tup) => tup,
     };
-    // dbg!(&title, &url);
-    let file_name = santize_title(&title);
-    dbg!(&file_name);
+
+    let file_name = format!("{}.mp3", santize_title(&title));
+    get_song(file_name, url).await?;
 
     Ok(())
 }
