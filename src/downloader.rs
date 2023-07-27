@@ -1,7 +1,8 @@
-const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
-const API_BASE: &str = "https://piped-api.privacy.com.de";
+const PIPED_BASE_API: &str = "https://piped-api.privacy.com.de";
 
 use crate::FFMPEG_PATH;
+use crate::USER_AGENT;
+
 use execute::Execute;
 use serde::Deserialize;
 use std::process::Command;
@@ -42,7 +43,7 @@ pub enum DownloadErrors {
 }
 
 async fn get_stream_url(video_id: &str) -> Result<(String, String), DownloadErrors> {
-    let url = format!("{API_BASE}/streams/{video_id}");
+    let url = format!("{PIPED_BASE_API}/streams/{video_id}");
     let client = reqwest::Client::new();
     let resp = match client
         .get(url)
