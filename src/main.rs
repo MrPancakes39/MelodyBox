@@ -26,16 +26,37 @@ enum PipedResponse {
     Error { error: String },
 }
 
-async fn download_song(video_id: &str) -> Result<()> {
+#[derive(Debug, thiserror::Error)]
+enum DownloadErrors {
+    #[error("There was an Error in doing the Request")]
+    RequestError(reqwest::Error),
+    #[error("Couldn't Parse JSON")]
+    ParseError,
+    #[error("API returned an Error")]
+    ApiError(String),
+}
+
+async fn download_song(video_id: &str) -> Result<(), DownloadErrors> {
     let url = format!("{API_BASE}/streams/{video_id}");
     let client = reqwest::Client::new();
-    let resp = client
+    let resp = match client
         .get(url)
         .header("User-Agent", USER_AGENT)
         .send()
-        .await?;
-    let json = resp.json::<PipedResponse>().await?;
-    println!("{:#?}", json);
+        .await
+    {
+        Err(err) => return Err(DownloadErrors::RequestError(err)),
+        Ok(res) => res,
+    };
+    let json = match resp.json::<PipedResponse>().await {
+        Err(_) => return Err(DownloadErrors::ParseError),
+        Ok(res) => res,
+    };
+    let song_info = match json {
+        PipedResponse::Error { error } => return Err(DownloadErrors::ApiError(error)),
+        PipedResponse::Success(info) => info,
+    };
+    println!("{:#?}", song_info);
     Ok(())
 }
 
