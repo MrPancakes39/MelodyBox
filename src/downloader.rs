@@ -5,9 +5,9 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct AudioStream {
-    pub url: String,
-    pub format: String,
-    pub bitrate: i32,
+    url: String,
+    format: String,
+    bitrate: i32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -32,9 +32,11 @@ pub enum DownloadErrors {
     ParseError,
     #[error("API returned an Error")]
     ApiError(String),
+    #[error("No M4A Streams Available")]
+    StreamError,
 }
 
-pub async fn download_song(video_id: &str) -> Result<(), DownloadErrors> {
+async fn get_stream_url(video_id: &str) -> Result<(String, String), DownloadErrors> {
     let url = format!("{API_BASE}/streams/{video_id}");
     let client = reqwest::Client::new();
     let resp = match client
@@ -54,6 +56,22 @@ pub async fn download_song(video_id: &str) -> Result<(), DownloadErrors> {
         PipedResponse::Error { error } => return Err(DownloadErrors::ApiError(error)),
         PipedResponse::Success(info) => info,
     };
-    println!("{:#?}", song_info);
+    let best_stream = song_info
+        .audio_streams
+        .iter()
+        .filter(|s| s.format == "M4A")
+        .max_by(|s1, s2| s1.bitrate.cmp(&s2.bitrate));
+    if best_stream.is_none() {
+        return Err(DownloadErrors::StreamError);
+    }
+    Ok((song_info.title, best_stream.unwrap().url.clone()))
+}
+
+pub async fn download_song(video_id: &str) -> Result<(), DownloadErrors> {
+    let (title, url) = match get_stream_url(video_id).await {
+        Err(err) => return Err(err),
+        Ok(tup) => tup,
+    };
+    dbg!(title, url);
     Ok(())
 }
