@@ -10,7 +10,6 @@ use std::process::Command;
 #[serde(rename_all = "camelCase")]
 struct AudioStream {
     url: String,
-    format: String,
     bitrate: i32,
 }
 
@@ -87,7 +86,7 @@ fn santize_title(title: &String) -> String {
         .collect::<String>()
 }
 
-async fn get_song(path: &str, url: &str) -> Result<(), DownloadErrors> {
+fn get_song(path: &str, url: &str) -> Result<(), DownloadErrors> {
     let mut cmd = Command::new(FFMPEG_PATH);
     cmd.arg("-y"); // set overwrite output file to true
     cmd.arg("-i"); // set input file
@@ -109,7 +108,7 @@ pub async fn download_song(video_id: &str) -> Result<(String, String), DownloadE
     };
 
     let file_path = format!("tmp/{}.mp3", santize_title(&title));
-    get_song(&file_path, &url).await?;
+    get_song(&file_path, &url)?;
 
     Ok((title, file_path))
 }

@@ -26,7 +26,8 @@ fn prechecks() -> Result<()> {
 async fn main() -> Result<()> {
     color_eyre::install()?;
     prechecks()?;
-    download_song("HoBGWhapaho").await?;
-    // download_song("I90KY3HNm0Y").await?;
+    // download_song("HoBGWhapaho").await?;
+    download_song("I90KY3HNm0Y").await?;
+    // dbg!(&title, &file);
     Ok(())
 }
