@@ -110,8 +110,8 @@ pub async fn download_song(video_id: &str) -> Result<(), DownloadErrors> {
         Ok(tup) => tup,
     };
 
-    let file_name = format!("{}.mp3", santize_title(&title));
-    get_song(file_name, url).await?;
+    let file_path = format!("tmp/{}.mp3", santize_title(&title));
+    get_song(file_path, url).await?;
 
     Ok(())
 }
