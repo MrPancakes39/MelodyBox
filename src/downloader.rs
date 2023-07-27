@@ -63,8 +63,9 @@ async fn get_stream_url(video_id: &str) -> Result<(String, String), DownloadErro
     let best_stream = song_info
         .audio_streams
         .iter()
-        .filter(|s| s.format == "M4A")
+        .filter(|s| s.format == "WEBMA_OPUS")
         .max_by(|s1, s2| s1.bitrate.cmp(&s2.bitrate));
+    dbg!(&best_stream);
     if best_stream.is_none() {
         return Err(DownloadErrors::StreamError);
     }
@@ -97,8 +98,8 @@ async fn get_song(path: impl AsRef<Path>, url: String) -> Result<(), DownloadErr
         Err(err) => return Err(DownloadErrors::RequestError(err)),
         Ok(res) => res,
     };
-    let file_content = resp.bytes().await.expect("To be able to parse as bytes");
     let mut file = File::create(path).expect("Can create file");
+    let file_content = resp.bytes().await.expect("To be able to parse as bytes");
     file.write_all(&file_content)
         .expect("To be able to write to file");
     Ok(())
@@ -110,7 +111,7 @@ pub async fn download_song(video_id: &str) -> Result<(), DownloadErrors> {
         Ok(tup) => tup,
     };
 
-    let file_path = format!("tmp/{}.mp3", santize_title(&title));
+    let file_path = format!("tmp/{}.webm", santize_title(&title));
     get_song(file_path, url).await?;
 
     Ok(())
