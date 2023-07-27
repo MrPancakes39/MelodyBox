@@ -101,7 +101,7 @@ fn get_song(path: &str, url: &str) -> Result<(), DownloadErrors> {
         .map_err(|_| DownloadErrors::DownloadFailed)
 }
 
-pub async fn download_song(video_id: &str) -> Result<(String, String), DownloadErrors> {
+pub async fn download_song(video_id: &str) -> Result<String, DownloadErrors> {
     let (title, url) = match get_stream_url(video_id).await {
         Err(err) => return Err(err),
         Ok(tup) => tup,
@@ -110,5 +110,5 @@ pub async fn download_song(video_id: &str) -> Result<(String, String), DownloadE
     let file_path = format!("tmp/{}.mp3", santize_title(&title));
     get_song(&file_path, &url)?;
 
-    Ok((title, file_path))
+    Ok(file_path)
 }
