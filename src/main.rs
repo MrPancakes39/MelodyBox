@@ -1,12 +1,11 @@
-mod downloader;
+// mod downloader;
 mod fetcher;
-mod ytmusic;
 
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
 const FFMPEG_PATH: &str = "/usr/bin/ffmpeg";
 
 use color_eyre::Result;
-use downloader::download_song;
+// use downloader::download_song;
 use fetcher::get_lyrics_browse_id;
 
 fn prechecks() -> Result<()> {
@@ -35,6 +34,5 @@ async fn main() -> Result<()> {
     // download_song("I90KY3HNm0Y").await?;
     // dbg!(&title, &file);
     get_lyrics_browse_id("HoBGWhapaho").await?;
-    // ytmusic::ytfunc().await?;
     Ok(())
 }
