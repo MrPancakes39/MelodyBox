@@ -63,13 +63,39 @@ async fn get_lyrics_browse_id(video_id: &str, context: &str) -> color_eyre::Resu
     Ok(lyrics_browse_id)
 }
 
-pub async fn get_lyrics_from_yt(video_id: &str) -> color_eyre::Result<()> {
+#[derive(Debug, Default)]
+pub struct Lyrics {
+    pub lyrics: Option<String>,
+    pub source: Option<String>,
+}
+
+pub async fn get_lyrics_from_yt(video_id: &str) -> color_eyre::Result<Lyrics> {
     let context = get_context();
     let lyrics_browse_id = get_lyrics_browse_id(video_id, &context).await?;
-    // dbg!(&lyrics_browse_id);
 
     let body = format!("{{\"browseId\": \"{lyrics_browse_id}\", {context}}}");
-    dbg!(&body);
+    let client = reqwest::Client::new();
+    let resp = client
+        .post("https://music.youtube.com/youtubei/v1/browse?alt=json")
+        .body(body)
+        .header("User-Agent", USER_AGENT)
+        .header("Content-Type", "application/json")
+        .send()
+        .await?;
+    let json: serde_json::Value = resp.json().await?;
+    let tmp =
+        &json["contents"]["sectionListRenderer"]["contents"][0]["musicDescriptionShelfRenderer"];
 
-    Ok(())
+    let mut ret: Lyrics = Default::default();
+    ret.lyrics = match &tmp["description"]["runs"][0]["text"] {
+        Value::String(s) => Some(s.clone()),
+        _ => None,
+    };
+    ret.source = match &tmp["footer"]["runs"][0]["text"] {
+        Value::String(s) => Some(s.clone()),
+        _ => None,
+    };
+    dbg!(&ret);
+
+    Ok(ret)
 }
