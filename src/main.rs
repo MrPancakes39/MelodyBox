@@ -1,13 +1,12 @@
 // mod downloader;
 mod fetcher;
-mod structure;
 
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
 const FFMPEG_PATH: &str = "/usr/bin/ffmpeg";
 
 use color_eyre::Result;
 // use downloader::download_song;
-use fetcher::get_lyrics_browse_id;
+use fetcher::get_lyrics_from_yt;
 
 fn prechecks() -> Result<()> {
     use execute::Execute;
@@ -34,6 +33,6 @@ async fn main() -> Result<()> {
     // download_song("HoBGWhapaho").await?;
     // download_song("I90KY3HNm0Y").await?;
     // dbg!(&title, &file);
-    get_lyrics_browse_id("HoBGWhapaho").await?;
+    get_lyrics_from_yt("HoBGWhapaho").await?;
     Ok(())
 }

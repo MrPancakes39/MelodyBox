@@ -31,9 +31,15 @@ fn get_body(video_id: &str) -> String {
         .replace("DATE", Utc::now().format("%Y%m%d").to_string().as_str())
 }
 
-fn nav(json: Value, array: &[&str]) -> Option<Value> {
+fn get_watch_watch_next_renderer(json: Value) -> Option<Value> {
+    let path = [
+        "contents",
+        "singleColumnMusicWatchNextResultsRenderer",
+        "tabbedRenderer",
+        "watchNextTabbedResultsRenderer",
+    ];
     let mut item = &json;
-    for k in array {
+    for k in path {
         item = item.get(k)?;
     }
     Some(item.clone())
@@ -42,47 +48,16 @@ fn nav(json: Value, array: &[&str]) -> Option<Value> {
 fn get_tab_browse_id(watch_next_renderer: Value, tab_id: usize) -> Option<String> {
     let tmp = &watch_next_renderer["tabs"][tab_id]["tabRenderer"];
     if tmp.get("unselectable").is_none() {
-        Some(serde_json::from_value(tmp["endpoint"]["browseEndpoint"]["browseId"].clone()).unwrap())
+        match &tmp["endpoint"]["browseEndpoint"]["browseId"] {
+            Value::String(s) => Some(s.clone()),
+            _ => None,
+        }
     } else {
         None
     }
 }
 
-async fn json_way(resp: reqwest::Response) -> color_eyre::Result<()> {
-    let text = resp.text().await?;
-
-    let y: serde_json::Value = serde_json::from_str(&text)?;
-    // dbg!(&y);
-    let watch_next_renderer = nav(
-        y,
-        &[
-            "contents",
-            "singleColumnMusicWatchNextResultsRenderer",
-            "tabbedRenderer",
-            "watchNextTabbedResultsRenderer",
-        ],
-    );
-    // dbg!(&watch_next_renderer);
-    // let lyrics_browse_id = get_tab_browse_id(watch_next_renderer.unwrap(), 1);
-    // dbg!(&lyrics_browse_id);
-
-    Ok(())
-}
-
-use crate::structure::NextEndpoint;
-
-async fn serde_way(resp: reqwest::Response) -> Option<String> {
-    let json = resp.json::<NextEndpoint>().await.ok()?;
-    let watch = json
-        .contents
-        .single_column_music_watch_next_results_renderer
-        .tabbed_renderer
-        .watch_next_tabbed_results_renderer;
-    let tab = watch.tabs[1].clone();
-    Some(tab.tab_renderer.endpoint?.browse_endpoint.browse_id)
-}
-
-pub async fn get_lyrics_browse_id(video_id: &str) -> color_eyre::Result<()> {
+async fn get_lyrics_browse_id(video_id: &str) -> color_eyre::Result<String> {
     let body = get_body(video_id);
     let client = reqwest::Client::new();
     let resp = client
@@ -92,6 +67,17 @@ pub async fn get_lyrics_browse_id(video_id: &str) -> color_eyre::Result<()> {
         .header("Content-Type", "application/json")
         .send()
         .await?;
+
+    let json: serde_json::Value = resp.json().await?;
+    let watch_next_renderer = get_watch_watch_next_renderer(json).unwrap();
+    let lyrics_browse_id = get_tab_browse_id(watch_next_renderer, 1).unwrap();
+
+    Ok(lyrics_browse_id)
+}
+
+pub async fn get_lyrics_from_yt(video_id: &str) -> color_eyre::Result<()> {
+    let lyrics_browse_id = get_lyrics_browse_id(video_id).await?;
+    dbg!(&lyrics_browse_id);
 
     Ok(())
 }
