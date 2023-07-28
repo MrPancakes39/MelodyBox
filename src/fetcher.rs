@@ -42,7 +42,7 @@ fn get_tab_browse_id(watch_next_renderer: &Value, tab_id: usize) -> Option<Strin
     }
 }
 
-async fn get_lyrics_browse_id(video_id: &str, context: &str) -> color_eyre::Result<String> {
+async fn get_lyrics_browse_id(video_id: &str, context: &str) -> color_eyre::Result<Option<String>> {
     let body = BROWSE_ID_JSON
         .replace("VIDEO_ID", video_id)
         .replace("CONTEXT", context);
@@ -58,7 +58,7 @@ async fn get_lyrics_browse_id(video_id: &str, context: &str) -> color_eyre::Resu
     let json: serde_json::Value = resp.json().await?;
     let watch_next_renderer = &json["contents"]["singleColumnMusicWatchNextResultsRenderer"]
         ["tabbedRenderer"]["watchNextTabbedResultsRenderer"];
-    let lyrics_browse_id = get_tab_browse_id(watch_next_renderer, 1).unwrap();
+    let lyrics_browse_id = get_tab_browse_id(watch_next_renderer, 1);
 
     Ok(lyrics_browse_id)
 }
@@ -71,8 +71,10 @@ pub struct Lyrics {
 
 pub async fn get_lyrics_from_yt(video_id: &str) -> color_eyre::Result<Lyrics> {
     let context = get_context();
-    let lyrics_browse_id = get_lyrics_browse_id(video_id, &context).await?;
-
+    let lyrics_browse_id = match get_lyrics_browse_id(video_id, &context).await? {
+        None => return Ok(Default::default()),
+        Some(s) => s,
+    };
     let body = format!("{{\"browseId\": \"{lyrics_browse_id}\", {context}}}");
     let client = reqwest::Client::new();
     let resp = client
@@ -95,7 +97,6 @@ pub async fn get_lyrics_from_yt(video_id: &str) -> color_eyre::Result<Lyrics> {
         Value::String(s) => Some(s.clone()),
         _ => None,
     };
-    dbg!(&ret);
 
     Ok(ret)
 }

@@ -33,6 +33,9 @@ async fn main() -> Result<()> {
     // download_song("HoBGWhapaho").await?;
     // download_song("I90KY3HNm0Y").await?;
     // dbg!(&title, &file);
-    get_lyrics_from_yt("HoBGWhapaho").await?;
+    // get_lyrics_from_yt("HoBGWhapaho").await?;
+    // get_lyrics_from_yt("I90KY3HNm0Y").await?;
+    let lyrics = get_lyrics_from_yt("z34enKCqRGk").await?;
+    dbg!(lyrics);
     Ok(())
 }
