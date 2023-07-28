@@ -31,21 +31,7 @@ fn get_body(video_id: &str) -> String {
         .replace("DATE", Utc::now().format("%Y%m%d").to_string().as_str())
 }
 
-fn get_watch_watch_next_renderer(json: Value) -> Option<Value> {
-    let path = [
-        "contents",
-        "singleColumnMusicWatchNextResultsRenderer",
-        "tabbedRenderer",
-        "watchNextTabbedResultsRenderer",
-    ];
-    let mut item = &json;
-    for k in path {
-        item = item.get(k)?;
-    }
-    Some(item.clone())
-}
-
-fn get_tab_browse_id(watch_next_renderer: Value, tab_id: usize) -> Option<String> {
+fn get_tab_browse_id(watch_next_renderer: &Value, tab_id: usize) -> Option<String> {
     let tmp = &watch_next_renderer["tabs"][tab_id]["tabRenderer"];
     if tmp.get("unselectable").is_none() {
         match &tmp["endpoint"]["browseEndpoint"]["browseId"] {
@@ -69,7 +55,8 @@ async fn get_lyrics_browse_id(video_id: &str) -> color_eyre::Result<String> {
         .await?;
 
     let json: serde_json::Value = resp.json().await?;
-    let watch_next_renderer = get_watch_watch_next_renderer(json).unwrap();
+    let watch_next_renderer = &json["contents"]["singleColumnMusicWatchNextResultsRenderer"]
+        ["tabbedRenderer"]["watchNextTabbedResultsRenderer"];
     let lyrics_browse_id = get_tab_browse_id(watch_next_renderer, 1).unwrap();
 
     Ok(lyrics_browse_id)
