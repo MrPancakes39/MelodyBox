@@ -48,16 +48,7 @@ fn get_tab_browse_id(watch_next_renderer: Value, tab_id: usize) -> Option<String
     }
 }
 
-pub async fn get_lyrics_browse_id(video_id: &str) -> color_eyre::Result<()> {
-    let body = get_body(video_id);
-    let client = reqwest::Client::new();
-    let resp = client
-        .post("https://music.youtube.com/youtubei/v1/next?alt=json")
-        .body(body)
-        .header("User-Agent", USER_AGENT)
-        .header("Content-Type", "application/json")
-        .send()
-        .await?;
+async fn json_way(resp: reqwest::Response) -> color_eyre::Result<()> {
     let text = resp.text().await?;
 
     let y: serde_json::Value = serde_json::from_str(&text)?;
@@ -72,8 +63,35 @@ pub async fn get_lyrics_browse_id(video_id: &str) -> color_eyre::Result<()> {
         ],
     );
     // dbg!(&watch_next_renderer);
-    let lyrics_browse_id = get_tab_browse_id(watch_next_renderer.unwrap(), 1);
-    dbg!(&lyrics_browse_id);
+    // let lyrics_browse_id = get_tab_browse_id(watch_next_renderer.unwrap(), 1);
+    // dbg!(&lyrics_browse_id);
+
+    Ok(())
+}
+
+use crate::structure::NextEndpoint;
+
+async fn serde_way(resp: reqwest::Response) -> Option<String> {
+    let json = resp.json::<NextEndpoint>().await.ok()?;
+    let watch = json
+        .contents
+        .single_column_music_watch_next_results_renderer
+        .tabbed_renderer
+        .watch_next_tabbed_results_renderer;
+    let tab = watch.tabs[1].clone();
+    Some(tab.tab_renderer.endpoint?.browse_endpoint.browse_id)
+}
+
+pub async fn get_lyrics_browse_id(video_id: &str) -> color_eyre::Result<()> {
+    let body = get_body(video_id);
+    let client = reqwest::Client::new();
+    let resp = client
+        .post("https://music.youtube.com/youtubei/v1/next?alt=json")
+        .body(body)
+        .header("User-Agent", USER_AGENT)
+        .header("Content-Type", "application/json")
+        .send()
+        .await?;
 
     Ok(())
 }
