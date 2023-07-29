@@ -12,9 +12,24 @@ const BROWSE_ID_JSON: &str = r#"{
     }, CONTEXT
 }"#;
 
+use crate::USER_AGENT;
+
+use crate::structure::NextEndpoint;
 use serde_json::Value;
 
-use crate::USER_AGENT;
+#[derive(Debug, thiserror::Error)]
+pub enum IdError {
+    #[error("There was an Error in doing the Request")]
+    RequestError(reqwest::Error),
+    #[error("Couldn't Parse JSON")]
+    ParseError,
+}
+
+impl From<reqwest::Error> for IdError {
+    fn from(error: reqwest::Error) -> Self {
+        Self::RequestError(error)
+    }
+}
 
 fn get_context() -> String {
     use chrono::Utc;
@@ -30,9 +45,7 @@ fn get_context() -> String {
     .replace("DATE", Utc::now().format("%Y%m%d").to_string().as_str())
 }
 
-use crate::structure::NextEndpoint;
-
-async fn get_lyrics_browse_id(video_id: &str, context: &str) -> color_eyre::Result<Option<String>> {
+async fn get_lyrics_browse_id(video_id: &str, context: &str) -> Result<Option<String>, IdError> {
     let body = BROWSE_ID_JSON
         .replace("VIDEO_ID", video_id)
         .replace("CONTEXT", context);
@@ -44,8 +57,11 @@ async fn get_lyrics_browse_id(video_id: &str, context: &str) -> color_eyre::Resu
         .header("Content-Type", "application/json")
         .send()
         .await?;
+    let json = match resp.json::<NextEndpoint>().await {
+        Err(_) => return Err(IdError::ParseError),
+        Ok(ne) => ne,
+    };
 
-    let json = resp.json::<NextEndpoint>().await?;
     let watch_next_renderer = json
         .contents
         .single_column_music_watch_next_results_renderer
