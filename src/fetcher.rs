@@ -30,17 +30,7 @@ fn get_context() -> String {
     .replace("DATE", Utc::now().format("%Y%m%d").to_string().as_str())
 }
 
-fn get_tab_browse_id(watch_next_renderer: &Value, tab_id: usize) -> Option<String> {
-    let tmp = &watch_next_renderer["tabs"][tab_id]["tabRenderer"];
-    if tmp.get("unselectable").is_none() {
-        match &tmp["endpoint"]["browseEndpoint"]["browseId"] {
-            Value::String(s) => Some(s.clone()),
-            _ => None,
-        }
-    } else {
-        None
-    }
-}
+use crate::structure::NextEndpoint;
 
 async fn get_lyrics_browse_id(video_id: &str, context: &str) -> color_eyre::Result<Option<String>> {
     let body = BROWSE_ID_JSON
@@ -55,10 +45,20 @@ async fn get_lyrics_browse_id(video_id: &str, context: &str) -> color_eyre::Resu
         .send()
         .await?;
 
-    let json: serde_json::Value = resp.json().await?;
-    let watch_next_renderer = &json["contents"]["singleColumnMusicWatchNextResultsRenderer"]
-        ["tabbedRenderer"]["watchNextTabbedResultsRenderer"];
-    let lyrics_browse_id = get_tab_browse_id(watch_next_renderer, 1);
+    let json = resp.json::<NextEndpoint>().await?;
+    let watch_next_renderer = json
+        .contents
+        .single_column_music_watch_next_results_renderer
+        .tabbed_renderer
+        .watch_next_tabbed_results_renderer;
+    let tab_renderer = &watch_next_renderer.tabs[1].tab_renderer;
+    let lyrics_browse_id = match tab_renderer.unselectable {
+        Some(_) => None,
+        None => tab_renderer
+            .endpoint
+            .as_ref()
+            .map(|e| e.browse_endpoint.browse_id.clone()),
+    };
 
     Ok(lyrics_browse_id)
 }
