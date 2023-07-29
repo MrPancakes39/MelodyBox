@@ -14,22 +14,9 @@ const BROWSE_ID_JSON: &str = r#"{
 
 use crate::USER_AGENT;
 
+use crate::errors::IdError;
 use crate::structure::NextEndpoint;
 use serde_json::Value;
-
-#[derive(Debug, thiserror::Error)]
-pub enum IdError {
-    #[error("There was an Error in doing the Request")]
-    RequestError(reqwest::Error),
-    #[error("Couldn't Parse JSON")]
-    ParseError,
-}
-
-impl From<reqwest::Error> for IdError {
-    fn from(error: reqwest::Error) -> Self {
-        Self::RequestError(error)
-    }
-}
 
 fn get_context() -> String {
     use chrono::Utc;

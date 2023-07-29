@@ -28,32 +28,16 @@ enum PipedResponse {
     Error { error: String },
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum DownloadErrors {
-    #[error("There was an Error in doing the Request")]
-    RequestError(reqwest::Error),
-    #[error("Couldn't Parse JSON")]
-    ParseError,
-    #[error("API returned an Error")]
-    ApiError(String),
-    #[error("No Audio Streams Available")]
-    StreamError,
-    #[error("Failed to Download to File")]
-    DownloadFailed,
-}
+use crate::errors::DownloadErrors;
 
 async fn get_stream_url(video_id: &str) -> Result<(String, String), DownloadErrors> {
     let url = format!("{PIPED_BASE_API}/streams/{video_id}");
     let client = reqwest::Client::new();
-    let resp = match client
+    let resp = client
         .get(url)
         .header("User-Agent", USER_AGENT)
         .send()
-        .await
-    {
-        Err(err) => return Err(DownloadErrors::RequestError(err)),
-        Ok(res) => res,
-    };
+        .await?;
     let json = match resp.json::<PipedResponse>().await {
         Err(_) => return Err(DownloadErrors::ParseError),
         Ok(res) => res,

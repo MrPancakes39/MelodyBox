@@ -1,5 +1,6 @@
 use serde::Deserialize;
 
+// =============================[ Youtube Music API Structs ]==============================
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BrowseEndpoint {
@@ -27,7 +28,7 @@ pub struct Tab {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WatchNextRenderer {
-    pub tabs: Vec<Tab>,
+    pub tabs: [Tab; 3],
 }
 
 #[derive(Debug, Deserialize)]
@@ -52,3 +53,4 @@ pub struct SingleColumnMusicWatchNextResultsRenderer {
 pub struct NextEndpoint {
     pub contents: SingleColumnMusicWatchNextResultsRenderer,
 }
+// ========================================================================================

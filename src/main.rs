@@ -1,4 +1,5 @@
-// mod downloader;
+mod downloader;
+mod errors;
 mod fetcher;
 mod structure;
 
@@ -6,7 +7,7 @@ const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/201001
 const FFMPEG_PATH: &str = "/usr/bin/ffmpeg";
 
 use color_eyre::Result;
-// use downloader::download_song;
+use downloader::download_song;
 use fetcher::get_lyrics_from_yt;
 
 fn prechecks() -> Result<()> {
@@ -38,5 +39,6 @@ async fn main() -> Result<()> {
     // get_lyrics_from_yt("I90KY3HNm0Y").await?;
     let lyrics = get_lyrics_from_yt("z34enKCqRGk").await?;
     dbg!(lyrics);
+    download_song("z34enKCqRGk").await?;
     Ok(())
 }
