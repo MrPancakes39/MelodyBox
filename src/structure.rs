@@ -1,25 +1,32 @@
 use serde::Deserialize;
 
 // =============================[ Youtube Music API Structs ]==============================
-#[derive(Debug, Deserialize, Clone)]
+// #[derive(Debug, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct TabContent {
+//     music_queue_renderer:
+// }
+
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BrowseEndpoint {
     pub browse_id: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TabEndpoint {
     pub browse_endpoint: BrowseEndpoint,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize)]
 pub struct TabRenderer {
+    // pub content: Option<TabContent>
     pub endpoint: Option<TabEndpoint>,
     pub unselectable: Option<bool>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Tab {
     pub tab_renderer: TabRenderer,
