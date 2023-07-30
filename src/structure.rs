@@ -1,11 +1,91 @@
 use serde::Deserialize;
 
 // =============================[ Youtube Music API Structs ]==============================
-// #[derive(Debug, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct TabContent {
-//     music_queue_renderer:
-// }
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrackRun {
+    pub text: String,
+    pub navigation_endpoint: Option<Endpoint>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LineTextRuns {
+    pub runs: Vec<TrackRun>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Thumbnail {
+    pub width: i32,
+    pub height: i32,
+    pub url: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ThumbnailStore {
+    pub thumbnails: Vec<Thumbnail>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Text {
+    pub text: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PropRuns {
+    pub runs: Vec<Text>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaylistPanelVideoRenderer {
+    pub video_id: String,
+    pub title: PropRuns,
+    pub length_text: PropRuns,
+    pub thumbnail: ThumbnailStore,
+    // pub navigation_endpoint: NavEndpoint, Not Needed
+    pub long_byline_text: LineTextRuns,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrimaryRenderer {
+    pub playlist_panel_video_renderer: Option<PlaylistPanelVideoRenderer>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaylistPanelVideoWrapperRenderer {
+    pub primary_renderer: PrimaryRenderer,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrackResult {
+    pub playlist_panel_video_wrapper_renderer: Option<PlaylistPanelVideoWrapperRenderer>,
+    pub playlist_panel_video_renderer: Option<PlaylistPanelVideoRenderer>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PlaylistPanelRenderer {
+    pub contents: Vec<TrackResult>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QueueContent {
+    pub playlist_panel_renderer: PlaylistPanelRenderer,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MusicQueueRenderer {
+    pub content: QueueContent,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TabContent {
+    pub music_queue_renderer: MusicQueueRenderer,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,14 +95,14 @@ pub struct BrowseEndpoint {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TabEndpoint {
+pub struct Endpoint {
     pub browse_endpoint: BrowseEndpoint,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct TabRenderer {
-    // pub content: Option<TabContent>
-    pub endpoint: Option<TabEndpoint>,
+    pub content: Option<TabContent>,
+    pub endpoint: Option<Endpoint>,
     pub unselectable: Option<bool>,
 }
 
