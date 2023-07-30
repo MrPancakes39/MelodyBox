@@ -12,12 +12,14 @@ const BROWSE_ID_JSON: &str = r#"{
     }, CONTEXT
 }"#;
 
+use serde_json::Value;
+
 use crate::USER_AGENT;
 
 use crate::errors::IdError;
 use crate::structure::{NextEndpoint, PlaylistPanelVideoRenderer, TrackRun};
 
-pub fn get_context() -> String {
+fn get_context() -> String {
     use chrono::Utc;
     r#"
     "context": {
@@ -171,40 +173,43 @@ pub async fn get_track_info(video_id: &str) -> Result<TrackInfo, IdError> {
     Ok(track_info)
 }
 
-// #[derive(Debug, Default)]
-// pub struct Lyrics {
-//     pub lyrics: Option<String>,
-//     pub source: Option<String>,
-// }
+#[derive(Debug, Default)]
+pub struct Lyrics {
+    pub lyrics: Option<String>,
+    pub source: Option<String>,
+}
 
-// pub async fn get_lyrics_from_yt(video_id: &str) -> color_eyre::Result<Lyrics> {
-//     let context = get_context();
-//     let lyrics_browse_id = match get_lyrics_browse_id(video_id, &context).await? {
-//         None => return Ok(Default::default()),
-//         Some(s) => s,
-//     };
-//     let body = format!("{{\"browseId\": \"{lyrics_browse_id}\", {context}}}");
-//     let client = reqwest::Client::new();
-//     let resp = client
-//         .post("https://music.youtube.com/youtubei/v1/browse?alt=json")
-//         .body(body)
-//         .header("User-Agent", USER_AGENT)
-//         .header("Content-Type", "application/json")
-//         .send()
-//         .await?;
-//     let json: serde_json::Value = resp.json().await?;
-//     let tmp =
-//         &json["contents"]["sectionListRenderer"]["contents"][0]["musicDescriptionShelfRenderer"];
+pub async fn get_lyrics_from_yt(info: &TrackInfo) -> color_eyre::Result<Lyrics> {
+    let lyrics_browse_id = match &info.lyrics_id {
+        None => return Ok(Default::default()),
+        Some(s) => s,
+    };
 
-//     let mut ret: Lyrics = Default::default();
-//     ret.lyrics = match &tmp["description"]["runs"][0]["text"] {
-//         Value::String(s) => Some(s.clone()),
-//         _ => None,
-//     };
-//     ret.source = match &tmp["footer"]["runs"][0]["text"] {
-//         Value::String(s) => Some(s.clone()),
-//         _ => None,
-//     };
+    let body = format!(
+        "{{\"browseId\": \"{lyrics_browse_id}\", {}}}",
+        get_context()
+    );
+    let client = reqwest::Client::new();
+    let resp = client
+        .post("https://music.youtube.com/youtubei/v1/browse?alt=json")
+        .body(body)
+        .header("User-Agent", USER_AGENT)
+        .header("Content-Type", "application/json")
+        .send()
+        .await?;
+    let json: serde_json::Value = resp.json().await?;
+    let tmp =
+        &json["contents"]["sectionListRenderer"]["contents"][0]["musicDescriptionShelfRenderer"];
 
-//     Ok(ret)
-// }
+    let mut ret: Lyrics = Default::default();
+    ret.lyrics = match &tmp["description"]["runs"][0]["text"] {
+        Value::String(s) => Some(s.clone()),
+        _ => None,
+    };
+    ret.source = match &tmp["footer"]["runs"][0]["text"] {
+        Value::String(s) => Some(s.clone()),
+        _ => None,
+    };
+
+    Ok(ret)
+}

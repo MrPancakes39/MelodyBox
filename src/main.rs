@@ -7,7 +7,8 @@ const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/201001
 const FFMPEG_PATH: &str = "/usr/bin/ffmpeg";
 
 use color_eyre::Result;
-use fetcher::{get_context, get_track_info};
+use fetcher::{get_lyrics_from_yt, get_track_info};
+
 // use downloader::download_song;
 // use fetcher::get_lyrics_from_yt;
 
@@ -41,8 +42,10 @@ async fn main() -> Result<()> {
     // let lyrics = get_lyrics_from_yt("z34enKCqRGk").await?;
     // dbg!(lyrics);
     // download_song("z34enKCqRGk").await?;
-    let info = get_track_info("HoBGWhapaho").await?;
-    dbg!(info);
+    let info = get_track_info("I90KY3HNm0Y").await?;
+    dbg!(&info);
+    let lyrics = get_lyrics_from_yt(&info).await?;
+    dbg!(&lyrics);
     // dbg!(test_string("6".to_string()));
     // dbg!(parse_year("2023".to_string()));
     // dbg!(parse_duration("1:03:30".to_string()));
