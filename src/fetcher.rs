@@ -12,12 +12,10 @@ const BROWSE_ID_JSON: &str = r#"{
     }, CONTEXT
 }"#;
 
-use serde_json::Value;
-
 use crate::USER_AGENT;
 
 use crate::errors::InfoError;
-use crate::structure::{NextEndpoint, PlaylistPanelVideoRenderer, TrackRun};
+use crate::structure::{LyricsEndpoint, NextEndpoint, PlaylistPanelVideoRenderer, TrackRun};
 
 fn get_context() -> String {
     use chrono::Utc;
@@ -198,18 +196,12 @@ pub async fn get_lyrics_from_yt(info: &TrackInfo) -> color_eyre::Result<Lyrics> 
         .header("Content-Type", "application/json")
         .send()
         .await?;
-    let json: serde_json::Value = resp.json().await?;
-    let tmp =
-        &json["contents"]["sectionListRenderer"]["contents"][0]["musicDescriptionShelfRenderer"];
+    let json = resp.json::<LyricsEndpoint>().await?;
 
-    let mut ret: Lyrics = Default::default();
-    ret.lyrics = match &tmp["description"]["runs"][0]["text"] {
-        Value::String(s) => Some(s.clone()),
-        _ => None,
-    };
-    ret.source = match &tmp["footer"]["runs"][0]["text"] {
-        Value::String(s) => Some(s.clone()),
-        _ => None,
+    let tmp = &json.contents.section_list_renderer.contents[0].music_description_shelf_renderer;
+    let ret = Lyrics {
+        lyrics: tmp.description.as_ref().map(|d| d.runs[0].text.clone()),
+        source: tmp.footer.as_ref().map(|f| f.runs[0].text.clone()),
     };
 
     Ok(ret)

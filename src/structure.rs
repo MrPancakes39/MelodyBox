@@ -140,4 +140,32 @@ pub struct SingleColumnMusicWatchNextResultsRenderer {
 pub struct NextEndpoint {
     pub contents: SingleColumnMusicWatchNextResultsRenderer,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct MusicRenderer {
+    pub description: Option<PropRuns>, // Guess
+    pub footer: Option<PropRuns>,      // Guess
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MusicDescriptionShelfRenderer {
+    pub music_description_shelf_renderer: MusicRenderer,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SectionContent {
+    pub contents: Vec<MusicDescriptionShelfRenderer>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SectionListRenderer {
+    pub section_list_renderer: SectionContent,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LyricsEndpoint {
+    pub contents: SectionListRenderer,
+}
 // ========================================================================================
