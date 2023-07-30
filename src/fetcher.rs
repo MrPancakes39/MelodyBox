@@ -46,7 +46,7 @@ pub struct TrackInfo {
     pub lyrics_id: Option<String>,
 }
 
-fn parse_duration(duration: &String) -> Option<i32> {
+fn parse_duration(duration: &str) -> Option<i32> {
     let vec = duration
         .split(':')
         .map(|n| n.parse::<i32>())
@@ -64,7 +64,7 @@ fn parse_duration(duration: &String) -> Option<i32> {
     )
 }
 
-fn parse_song_runs(ti: &mut TrackInfo, runs: &Vec<TrackRun>) {
+fn parse_song_runs(ti: &mut TrackInfo, runs: &[TrackRun]) {
     // uneven items are always separators
     for run in runs.iter().step_by(2) {
         let text = &run.text;
@@ -82,14 +82,14 @@ fn parse_song_runs(ti: &mut TrackInfo, runs: &Vec<TrackRun>) {
             if run.text.len() == 4 && run.text.chars().all(char::is_numeric) {
                 ti.year = text.parse::<i32>().ok();
             // duration skip
-            } else if run.text.contains(":") {
+            } else if run.text.contains(':') {
                 continue; // if length is None this is most likely None
             } else {
                 // views: start number alphanum space alphanum end
                 let views_pattern = text.len() > 3
-                    && text.chars().next().unwrap().is_numeric()
-                    && text.chars().filter(|c| c == &' ').count() == 1
-                    && text.chars().next_back().unwrap() != ' ';
+                    && text.starts_with(char::is_numeric)
+                    && text.chars().filter(|&c| c == ' ').count() == 1
+                    && !text.ends_with(' ');
                 // text is views
                 if views_pattern {
                     continue;
@@ -108,7 +108,7 @@ fn parse_watch_track(track: &PlaylistPanelVideoRenderer) -> TrackInfo {
         duration: track.length_text.as_ref().map(|l| l.runs[0].text.clone()),
         ..Default::default()
     };
-    tmp.duration_seconds = tmp.duration.as_ref().map(|d| parse_duration(d)).flatten();
+    tmp.duration_seconds = tmp.duration.as_ref().and_then(|d| parse_duration(d));
     tmp.thumbnail = track
         .thumbnail
         .thumbnails
