@@ -19,14 +19,14 @@ impl From<reqwest::Error> for DownloadErrors {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum IdError {
+pub enum InfoError {
     #[error("There was an Error in doing the Request")]
     RequestError(reqwest::Error),
     #[error("Couldn't Parse JSON")]
     ParseError,
 }
 
-impl From<reqwest::Error> for IdError {
+impl From<reqwest::Error> for InfoError {
     fn from(error: reqwest::Error) -> Self {
         Self::RequestError(error)
     }

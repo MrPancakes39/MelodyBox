@@ -16,7 +16,7 @@ use serde_json::Value;
 
 use crate::USER_AGENT;
 
-use crate::errors::IdError;
+use crate::errors::InfoError;
 use crate::structure::{NextEndpoint, PlaylistPanelVideoRenderer, TrackRun};
 
 fn get_context() -> String {
@@ -46,21 +46,22 @@ pub struct TrackInfo {
     pub lyrics_id: Option<String>,
 }
 
-fn parse_duration(duration: &String) -> i32 {
+fn parse_duration(duration: &String) -> Option<i32> {
     let vec = duration
         .split(':')
         .map(|n| n.parse::<i32>())
         .collect::<Result<Vec<i32>, _>>()
-        .ok()
-        .unwrap();
+        .ok()?;
     if vec.len() > 3 {
         panic!("Duration vector has more than 3 splits")
     }
-    vec.iter()
-        .rev()
-        .zip([1, 60, 3600])
-        .map(|(m, n)| m * n)
-        .sum::<i32>()
+    Some(
+        vec.iter()
+            .rev()
+            .zip([1, 60, 3600])
+            .map(|(m, n)| m * n)
+            .sum::<i32>(),
+    )
 }
 
 fn parse_song_runs(ti: &mut TrackInfo, runs: &Vec<TrackRun>) {
@@ -85,10 +86,10 @@ fn parse_song_runs(ti: &mut TrackInfo, runs: &Vec<TrackRun>) {
                 continue; // if length is None this is most likely None
             } else {
                 // views: start number alphanum space alphanum end
-                let views_pattern = run.text.len() > 3
+                let views_pattern = text.len() > 3
                     && text.chars().next().unwrap().is_numeric()
                     && text.chars().filter(|c| c == &' ').count() == 1
-                    && text.chars().last().unwrap() != ' ';
+                    && text.chars().next_back().unwrap() != ' ';
                 // text is views
                 if views_pattern {
                     continue;
@@ -107,7 +108,7 @@ fn parse_watch_track(track: &PlaylistPanelVideoRenderer) -> TrackInfo {
         duration: track.length_text.as_ref().map(|l| l.runs[0].text.clone()),
         ..Default::default()
     };
-    tmp.duration_seconds = tmp.duration.as_ref().map(|d| parse_duration(d));
+    tmp.duration_seconds = tmp.duration.as_ref().map(|d| parse_duration(d)).flatten();
     tmp.thumbnail = track
         .thumbnail
         .thumbnails
@@ -119,7 +120,7 @@ fn parse_watch_track(track: &PlaylistPanelVideoRenderer) -> TrackInfo {
     tmp
 }
 
-pub async fn get_track_info(video_id: &str) -> Result<TrackInfo, IdError> {
+pub async fn get_track_info(video_id: &str) -> Result<TrackInfo, InfoError> {
     let body = BROWSE_ID_JSON
         .replace("VIDEO_ID", video_id)
         .replace("CONTEXT", get_context().as_str());
@@ -133,7 +134,7 @@ pub async fn get_track_info(video_id: &str) -> Result<TrackInfo, IdError> {
         .await?;
 
     let json = match resp.json::<NextEndpoint>().await {
-        Err(_) => return Err(IdError::ParseError),
+        Err(_) => return Err(InfoError::ParseError),
         Ok(ne) => ne,
     };
 
@@ -156,10 +157,10 @@ pub async fn get_track_info(video_id: &str) -> Result<TrackInfo, IdError> {
         None => &results.contents[0].playlist_panel_video_renderer,
     };
 
-    let mut track_info = playlist_renderer
-        .as_ref()
-        .map(|renderer| parse_watch_track(renderer))
-        .unwrap();
+    let mut track_info = match playlist_renderer {
+        None => panic!("Couldn't find VideoRenderer for Track!"),
+        Some(renderer) => parse_watch_track(renderer),
+    };
 
     let tab_renderer = &watch_next_renderer.tabs[1].tab_renderer;
     track_info.lyrics_id = match tab_renderer.unselectable {
