@@ -13,7 +13,7 @@ pub struct LineTextRuns {
     pub runs: Vec<TrackRun>,
 }
 
-#[derive(Debug, Deserialize, Default, Clone)]
+#[derive(Debug, Deserialize, Default)]
 pub struct Thumbnail {
     pub width: i32,
     pub height: i32,
@@ -40,7 +40,7 @@ pub struct PropRuns {
 pub struct PlaylistPanelVideoRenderer {
     pub video_id: String,
     pub title: PropRuns,
-    pub length_text: PropRuns,
+    pub length_text: Option<PropRuns>, // Taking a Guess
     pub thumbnail: ThumbnailStore,
     // pub navigation_endpoint: NavEndpoint, Not Needed
     pub long_byline_text: LineTextRuns,

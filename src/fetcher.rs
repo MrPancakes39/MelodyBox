@@ -15,8 +15,7 @@ const BROWSE_ID_JSON: &str = r#"{
 use crate::USER_AGENT;
 
 use crate::errors::IdError;
-use crate::structure::{NextEndpoint, PlaylistPanelVideoRenderer, Thumbnail, TrackRun};
-use serde_json::Value;
+use crate::structure::{NextEndpoint, PlaylistPanelVideoRenderer, TrackRun};
 
 pub fn get_context() -> String {
     use chrono::Utc;
@@ -30,6 +29,19 @@ pub fn get_context() -> String {
         "user": {}
     }"#
     .replace("DATE", Utc::now().format("%Y%m%d").to_string().as_str())
+}
+
+#[derive(Debug, Default)]
+pub struct TrackInfo {
+    pub video_id: String,
+    pub title: String,
+    pub duration: Option<String>,
+    pub duration_seconds: Option<i32>,
+    pub thumbnail: String,
+    pub artists: Vec<String>,
+    pub album: Option<String>,
+    pub year: Option<i32>,
+    pub lyrics_id: Option<String>,
 }
 
 fn parse_duration(duration: &String) -> i32 {
@@ -49,23 +61,13 @@ fn parse_duration(duration: &String) -> i32 {
         .sum::<i32>()
 }
 
-#[derive(Debug, Default)]
-pub struct TrackInfo {
-    pub video_id: String,
-    pub title: String,
-    pub duration: String,
-    pub duration_seconds: i32,
-    pub thumbnail: Thumbnail,
-    pub artists: Vec<String>,
-    pub album: Option<String>,
-    pub year: Option<i32>,
-    pub lyrics_id: Option<String>,
-}
-
 fn parse_song_runs(ti: &mut TrackInfo, runs: &Vec<TrackRun>) {
+    // uneven items are always separators
     for run in runs.iter().step_by(2) {
         let text = &run.text;
+        // artist or album
         if let Some(nav) = &run.navigation_endpoint {
+            // if this panics then it's my fault
             let id = &nav.browse_endpoint.browse_id;
             if id.starts_with("MPRE") || id.contains("release_detail") {
                 ti.album = Some(text.clone());
@@ -73,19 +75,23 @@ fn parse_song_runs(ti: &mut TrackInfo, runs: &Vec<TrackRun>) {
                 ti.artists.push(text.clone())
             }
         } else {
+            // text is a year
             if run.text.len() == 4 && run.text.chars().all(char::is_numeric) {
                 ti.year = text.parse::<i32>().ok();
+            // duration skip
             } else if run.text.contains(":") {
-                continue; // duration skip
+                continue; // if length is None this is most likely None
             } else {
-                // start number alphanum space alphanum end
+                // views: start number alphanum space alphanum end
                 let views_pattern = run.text.len() > 3
                     && text.chars().next().unwrap().is_numeric()
                     && text.chars().filter(|c| c == &' ').count() == 1
                     && text.chars().last().unwrap() != ' ';
+                // text is views
                 if views_pattern {
                     continue;
                 }
+                // text is artist
                 ti.artists.push(text.clone());
             }
         }
@@ -96,25 +102,25 @@ fn parse_watch_track(track: &PlaylistPanelVideoRenderer) -> TrackInfo {
     let mut tmp = TrackInfo {
         video_id: track.video_id.clone(),
         title: track.title.runs[0].text.clone(),
-        duration: track.length_text.runs[0].text.clone(),
+        duration: track.length_text.as_ref().map(|l| l.runs[0].text.clone()),
         ..Default::default()
     };
-    tmp.duration_seconds = parse_duration(&tmp.duration);
+    tmp.duration_seconds = tmp.duration.as_ref().map(|d| parse_duration(d));
     tmp.thumbnail = track
         .thumbnail
         .thumbnails
         .iter()
         .max_by(|x, y| x.width.cmp(&y.width))
-        .unwrap()
-        .clone();
+        .map(|thumb| thumb.url.clone())
+        .unwrap_or_default();
     parse_song_runs(&mut tmp, &track.long_byline_text.runs);
     tmp
 }
 
-pub async fn get_track_info(video_id: &str, context: &str) -> Result<TrackInfo, IdError> {
+pub async fn get_track_info(video_id: &str) -> Result<TrackInfo, IdError> {
     let body = BROWSE_ID_JSON
         .replace("VIDEO_ID", video_id)
-        .replace("CONTEXT", context);
+        .replace("CONTEXT", get_context().as_str());
     let client = reqwest::Client::new();
     let resp = client
         .post("https://music.youtube.com/youtubei/v1/next?alt=json")
@@ -135,13 +141,8 @@ pub async fn get_track_info(video_id: &str, context: &str) -> Result<TrackInfo, 
         .tabbed_renderer
         .watch_next_tabbed_results_renderer;
 
-    // dbg!(watch_next_renderer);
-
-    // let results = &watch_next_renderer["tabs"][0]["tabRenderer"]["content"]["musicQueueRenderer"]
-    // ["content"]["playlistPanelRenderer"];
-
     let results = match &watch_next_renderer.tabs[0].tab_renderer.content {
-        None => return Err(IdError::ParseError),
+        None => panic!("Shouldn't Reach Here"),
         Some(content) => &content.music_queue_renderer.content.playlist_panel_renderer,
     };
 
@@ -158,19 +159,6 @@ pub async fn get_track_info(video_id: &str, context: &str) -> Result<TrackInfo, 
         .map(|renderer| parse_watch_track(renderer))
         .unwrap();
 
-    // let mut result = &results["contents"][0];
-    // if let Some(ppvwr) = result.get("playlistPanelVideoWrapperRenderer") {
-    // result = &ppvwr["primaryRenderer"];
-    // }
-    // let track = result
-    // .get("playlistPanelVideoRenderer")
-    // .map(|data| parse_watch_track(data));
-
-    // let watch_next_renderer = json
-    //     .contents
-    //     .single_column_music_watch_next_results_renderer
-    //     .tabbed_renderer
-    //     .watch_next_tabbed_results_renderer;
     let tab_renderer = &watch_next_renderer.tabs[1].tab_renderer;
     track_info.lyrics_id = match tab_renderer.unselectable {
         Some(_) => None,
@@ -180,8 +168,6 @@ pub async fn get_track_info(video_id: &str, context: &str) -> Result<TrackInfo, 
             .map(|e| e.browse_endpoint.browse_id.clone()),
     };
 
-    // Ok(lyrics_browse_id)
-    // Ok(None)
     Ok(track_info)
 }
 
