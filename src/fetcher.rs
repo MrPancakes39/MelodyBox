@@ -81,21 +81,20 @@ fn parse_watch_track(data: &Value) {
         };
         // dbg!(text);
         if let Some(nav) = run.get("navigationEndpoint") {
-            let id_val = &run["navigationEndpoint"]["browseEndpoint"]["browseId"];
-            let id = match id_val {
+            let id = match &run["navigationEndpoint"]["browseEndpoint"]["browseId"] {
                 Value::String(s) => Some(s),
                 _ => None,
             };
-            if id.is_some()
-                && (id.unwrap().starts_with("MPRE") || id_val.get("release_detail").is_some())
-            {
-                album = Some(text.clone());
-            } else {
-                artists.push(Artist {
-                    name: text.clone(),
-                    id: id.cloned(),
-                });
+            if let Some(id) = id {
+                if id.starts_with("MPRE") || id.contains("release_detail") {
+                    album = Some(text.clone());
+                    continue;
+                }
             }
+            artists.push(Artist {
+                name: text.clone(),
+                id: id.cloned(),
+            });
         } else {
             // \d\d\d\d
             if text.len() == 4 && text.chars().all(char::is_numeric) {
