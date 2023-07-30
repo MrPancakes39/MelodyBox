@@ -15,7 +15,7 @@ const BROWSE_ID_JSON: &str = r#"{
 use crate::USER_AGENT;
 
 use crate::errors::IdError;
-use crate::structure::NextEndpoint;
+use crate::structure::{NextEndpoint, PlaylistPanelVideoRenderer, Thumbnail, TrackRun};
 use serde_json::Value;
 
 pub fn get_context() -> String {
@@ -32,104 +32,86 @@ pub fn get_context() -> String {
     .replace("DATE", Utc::now().format("%Y%m%d").to_string().as_str())
 }
 
-fn parse_duration(duration: Option<&String>) -> Option<i32> {
-    let duration = duration?;
+fn parse_duration(duration: &String) -> i32 {
     let vec = duration
         .split(':')
         .map(|n| n.parse::<i32>())
         .collect::<Result<Vec<i32>, _>>()
-        .ok()?;
+        .ok()
+        .unwrap();
     if vec.len() > 3 {
-        return None;
+        panic!("Duration vector has more than 3 splits")
     }
-    let secs = vec
-        .iter()
+    vec.iter()
         .rev()
         .zip([1, 60, 3600])
         .map(|(m, n)| m * n)
-        .sum::<i32>();
-    Some(secs)
+        .sum::<i32>()
 }
 
-fn parse_watch_track(data: &Value) {
-    let video_id = &data["videoId"];
-    let title = &data["title"]["runs"][0]["text"];
-    let length = &data["lengthText"]["runs"][0]["text"];
-    let thumbnails = &data["thumbnail"]["thumbnails"];
-    let video_type = &data["navigationEndpoint"]["watchEndpoint"]
-        ["watchEndpointMusicSupportedConfigs"]["watchEndpointMusicConfig"]["musicVideoType"];
-    let runs = match &data["longBylineText"]["runs"] {
-        Value::Array(a) => a,
-        _ => panic!("Err"),
-    };
+#[derive(Debug, Default)]
+pub struct TrackInfo {
+    pub video_id: String,
+    pub title: String,
+    pub duration: String,
+    pub duration_seconds: i32,
+    pub thumbnail: Thumbnail,
+    pub artists: Vec<String>,
+    pub album: Option<String>,
+    pub year: Option<i32>,
+    pub lyrics_id: Option<String>,
+}
 
-    #[derive(Debug)]
-    struct Artist {
-        name: String,
-        id: Option<String>,
-    }
-
-    let mut artists = Vec::<Artist>::new();
-    let mut album = None;
-    let mut duration = None;
-    let mut duration_seconds = None;
-    let mut year = None;
+fn parse_song_runs(ti: &mut TrackInfo, runs: &Vec<TrackRun>) {
     for run in runs.iter().step_by(2) {
-        let text = match &run["text"] {
-            Value::String(s) => s,
-            _ => panic!("Err: text"),
-        };
-        // dbg!(text);
-        if let Some(nav) = run.get("navigationEndpoint") {
-            let id = match &run["navigationEndpoint"]["browseEndpoint"]["browseId"] {
-                Value::String(s) => Some(s),
-                _ => None,
-            };
-            if let Some(id) = id {
-                if id.starts_with("MPRE") || id.contains("release_detail") {
-                    album = Some(text.clone());
-                    continue;
-                }
-            }
-            artists.push(Artist {
-                name: text.clone(),
-                id: id.cloned(),
-            });
-        } else {
-            // \d\d\d\d
-            if text.len() == 4 && text.chars().all(char::is_numeric) {
-                year = text.parse::<i32>().ok()
-            } else if text.contains(':') {
-                duration = Some(text.clone());
-                duration_seconds = parse_duration(duration.as_ref());
+        let text = &run.text;
+        if let Some(nav) = &run.navigation_endpoint {
+            let id = &nav.browse_endpoint.browse_id;
+            if id.starts_with("MPRE") || id.contains("release_detail") {
+                ti.album = Some(text.clone());
             } else {
-                let views_pattern = text.len() > 3
+                ti.artists.push(text.clone())
+            }
+        } else {
+            if run.text.len() == 4 && run.text.chars().all(char::is_numeric) {
+                ti.year = text.parse::<i32>().ok();
+            } else if run.text.contains(":") {
+                continue; // duration skip
+            } else {
+                // start number alphanum space alphanum end
+                let views_pattern = run.text.len() > 3
                     && text.chars().next().unwrap().is_numeric()
                     && text.chars().filter(|c| c == &' ').count() == 1
                     && text.chars().last().unwrap() != ' ';
-                if !views_pattern {
-                    artists.push(Artist {
-                        name: text.clone(),
-                        id: None,
-                    });
+                if views_pattern {
+                    continue;
                 }
+                ti.artists.push(text.clone());
             }
         }
     }
-
-    dbg!(album);
-    dbg!(artists);
-    dbg!(duration);
-    dbg!(duration_seconds);
-    dbg!(length);
-    dbg!(thumbnails);
-    dbg!(title);
-    dbg!(video_id);
-    dbg!(video_type);
-    dbg!(year);
 }
 
-pub async fn get_track_info(video_id: &str, context: &str) -> Result<Option<String>, IdError> {
+fn parse_watch_track(track: &PlaylistPanelVideoRenderer) -> TrackInfo {
+    let mut tmp = TrackInfo {
+        video_id: track.video_id.clone(),
+        title: track.title.runs[0].text.clone(),
+        duration: track.length_text.runs[0].text.clone(),
+        ..Default::default()
+    };
+    tmp.duration_seconds = parse_duration(&tmp.duration);
+    tmp.thumbnail = track
+        .thumbnail
+        .thumbnails
+        .iter()
+        .max_by(|x, y| x.width.cmp(&y.width))
+        .unwrap()
+        .clone();
+    parse_song_runs(&mut tmp, &track.long_byline_text.runs);
+    tmp
+}
+
+pub async fn get_track_info(video_id: &str, context: &str) -> Result<TrackInfo, IdError> {
     let body = BROWSE_ID_JSON
         .replace("VIDEO_ID", video_id)
         .replace("CONTEXT", context);
@@ -141,46 +123,66 @@ pub async fn get_track_info(video_id: &str, context: &str) -> Result<Option<Stri
         .header("Content-Type", "application/json")
         .send()
         .await?;
-    type X = serde_json::Value;
-    // type X = NextEndpoint;
-    let json = match resp.json::<X>().await {
+
+    let json = match resp.json::<NextEndpoint>().await {
         Err(_) => return Err(IdError::ParseError),
         Ok(ne) => ne,
     };
 
-    // dbg!(&json["contents"]);
-    let watch_next_renderer = &json["contents"]["singleColumnMusicWatchNextResultsRenderer"]
-        ["tabbedRenderer"]["watchNextTabbedResultsRenderer"];
+    let watch_next_renderer = json
+        .contents
+        .single_column_music_watch_next_results_renderer
+        .tabbed_renderer
+        .watch_next_tabbed_results_renderer;
 
     // dbg!(watch_next_renderer);
 
-    let results = &watch_next_renderer["tabs"][0]["tabRenderer"]["content"]["musicQueueRenderer"]
-        ["content"]["playlistPanelRenderer"];
-    // dbg!(results);
-    let mut result = &results["contents"][0];
-    if let Some(ppvwr) = result.get("playlistPanelVideoWrapperRenderer") {
-        result = &ppvwr["primaryRenderer"];
-    }
-    let track = result
-        .get("playlistPanelVideoRenderer")
-        .map(|data| parse_watch_track(data));
+    // let results = &watch_next_renderer["tabs"][0]["tabRenderer"]["content"]["musicQueueRenderer"]
+    // ["content"]["playlistPanelRenderer"];
+
+    let results = match &watch_next_renderer.tabs[0].tab_renderer.content {
+        None => return Err(IdError::ParseError),
+        Some(content) => &content.music_queue_renderer.content.playlist_panel_renderer,
+    };
+
+    let playlist_renderer = match results.contents[0]
+        .playlist_panel_video_wrapper_renderer
+        .as_ref()
+    {
+        Some(ppvwr) => &ppvwr.primary_renderer.playlist_panel_video_renderer,
+        None => &results.contents[0].playlist_panel_video_renderer,
+    };
+
+    let mut track_info = playlist_renderer
+        .as_ref()
+        .map(|renderer| parse_watch_track(renderer))
+        .unwrap();
+
+    // let mut result = &results["contents"][0];
+    // if let Some(ppvwr) = result.get("playlistPanelVideoWrapperRenderer") {
+    // result = &ppvwr["primaryRenderer"];
+    // }
+    // let track = result
+    // .get("playlistPanelVideoRenderer")
+    // .map(|data| parse_watch_track(data));
 
     // let watch_next_renderer = json
     //     .contents
     //     .single_column_music_watch_next_results_renderer
     //     .tabbed_renderer
     //     .watch_next_tabbed_results_renderer;
-    // let tab_renderer = &watch_next_renderer.tabs[1].tab_renderer;
-    // let lyrics_browse_id = match tab_renderer.unselectable {
-    //     Some(_) => None,
-    //     None => tab_renderer
-    //         .endpoint
-    //         .as_ref()
-    //         .map(|e| e.browse_endpoint.browse_id.clone()),
-    // };
+    let tab_renderer = &watch_next_renderer.tabs[1].tab_renderer;
+    track_info.lyrics_id = match tab_renderer.unselectable {
+        Some(_) => None,
+        None => tab_renderer
+            .endpoint
+            .as_ref()
+            .map(|e| e.browse_endpoint.browse_id.clone()),
+    };
 
     // Ok(lyrics_browse_id)
-    Ok(None)
+    // Ok(None)
+    Ok(track_info)
 }
 
 // #[derive(Debug, Default)]

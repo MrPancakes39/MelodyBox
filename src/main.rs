@@ -41,7 +41,8 @@ async fn main() -> Result<()> {
     // let lyrics = get_lyrics_from_yt("z34enKCqRGk").await?;
     // dbg!(lyrics);
     // download_song("z34enKCqRGk").await?;
-    get_track_info("HoBGWhapaho", &get_context()).await?;
+    let info = get_track_info("HoBGWhapaho", &get_context()).await?;
+    dbg!(info);
     // dbg!(test_string("6".to_string()));
     // dbg!(parse_year("2023".to_string()));
     // dbg!(parse_duration("1:03:30".to_string()));

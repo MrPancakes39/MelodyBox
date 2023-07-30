@@ -13,7 +13,7 @@ pub struct LineTextRuns {
     pub runs: Vec<TrackRun>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default, Clone)]
 pub struct Thumbnail {
     pub width: i32,
     pub height: i32,
