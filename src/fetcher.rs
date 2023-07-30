@@ -1,34 +1,10 @@
-const BROWSE_ID_JSON: &str = r#"{
-    "enablePersistentPlaylistPanel": true,
-    "isAudioOnly": true,
-    "tunerSettingValue": "AUTOMIX_SETTING_NORMAL",
-    "videoId": "VIDEO_ID",
-    "playlistId": "RDAMVMVIDEO_ID",
-    "watchEndpointMusicSupportedConfigs": {
-        "watchEndpointMusicConfig": {
-            "hasPersistentPlaylistPanel": true,
-            "musicVideoType": "MUSIC_VIDEO_TYPE_ATV"
-        }
-    }, CONTEXT
-}"#;
-
 use crate::USER_AGENT;
 
 use crate::errors::InfoError;
 use crate::structure::{LyricsEndpoint, NextEndpoint, PlaylistPanelVideoRenderer, TrackRun};
 
-fn get_context() -> String {
-    use chrono::Utc;
-    r#"
-    "context": {
-        "client": {
-            "clientName": "WEB_REMIX",
-            "clientVersion": "1.DATE.01.00",
-            "hl": "en"
-        },
-        "user": {}
-    }"#
-    .replace("DATE", Utc::now().format("%Y%m%d").to_string().as_str())
+fn get_date() -> String {
+    chrono::Utc::now().format("%Y%m%d").to_string()
 }
 
 #[derive(Debug, Default)]
@@ -119,9 +95,10 @@ fn parse_watch_track(track: &PlaylistPanelVideoRenderer) -> TrackInfo {
 }
 
 pub async fn get_track_info(video_id: &str) -> Result<TrackInfo, InfoError> {
-    let body = BROWSE_ID_JSON
-        .replace("VIDEO_ID", video_id)
-        .replace("CONTEXT", get_context().as_str());
+    let body = format!(
+        r#"{{"enablePersistentPlaylistPanel":true,"isAudioOnly":true,"tunerSettingValue":"AUTOMIX_SETTING_NORMAL","videoId":"{video_id}","playlistId":"RDAMVM{video_id}","watchEndpointMusicSupportedConfigs":{{"watchEndpointMusicConfig":{{"hasPersistentPlaylistPanel":true,"musicVideoType":"MUSIC_VIDEO_TYPE_ATV"}}}},"context":{{"client":{{"clientName":"WEB_REMIX","clientVersion":"1.{}.01.00","hl":"en"}},"user":{{}}}}}}"#,
+        get_date()
+    );
     let client = reqwest::Client::new();
     let resp = client
         .post("https://music.youtube.com/youtubei/v1/next?alt=json")
@@ -183,10 +160,9 @@ pub async fn get_lyrics_from_yt(info: &TrackInfo) -> color_eyre::Result<Lyrics> 
         None => return Ok(Default::default()),
         Some(s) => s,
     };
-
     let body = format!(
-        "{{\"browseId\": \"{lyrics_browse_id}\", {}}}",
-        get_context()
+        r#"{{"browseId":"{lyrics_browse_id}","context":{{"client":{{"clientName":"WEB_REMIX","clientVersion":"1.{}.01.00","hl":"en"}},"user":{{}}}}}}"#,
+        get_date()
     );
     let client = reqwest::Client::new();
     let resp = client
