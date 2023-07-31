@@ -4,6 +4,7 @@ use crate::FFMPEG_PATH;
 use crate::USER_AGENT;
 
 use execute::Execute;
+use reqwest::Client;
 use serde::Deserialize;
 use std::process::Command;
 
@@ -30,9 +31,11 @@ enum PipedResponse {
 
 use crate::errors::DownloadErrors;
 
-async fn get_stream_url(video_id: &str) -> Result<(String, String), DownloadErrors> {
+async fn get_stream_url(
+    client: &Client,
+    video_id: &str,
+) -> Result<(String, String), DownloadErrors> {
     let url = format!("{PIPED_BASE_API}/streams/{video_id}");
-    let client = reqwest::Client::new();
     let resp = client
         .get(url)
         .header("User-Agent", USER_AGENT)
@@ -56,7 +59,7 @@ async fn get_stream_url(video_id: &str) -> Result<(String, String), DownloadErro
     Ok((song_info.title, best_stream.unwrap().url.clone()))
 }
 
-fn santize_title(title: &String) -> String {
+fn sanitize_title(title: &str) -> String {
     // Windows not allowed chars in filename
     let not_allowed = ['/', '<', '>', ':', '"', '\\', '|', '?', '*'];
     title
@@ -86,13 +89,13 @@ fn get_song(path: &str, url: &str) -> Result<(), DownloadErrors> {
         .map_err(|_| DownloadErrors::DownloadFailed)
 }
 
-pub async fn download_song(video_id: &str) -> Result<String, DownloadErrors> {
-    let (title, url) = match get_stream_url(video_id).await {
+pub async fn download_song(client: &Client, video_id: &str) -> Result<String, DownloadErrors> {
+    let (title, url) = match get_stream_url(client, video_id).await {
         Err(err) => return Err(err),
         Ok(tup) => tup,
     };
 
-    let file_path = format!("tmp/{}.mp3", santize_title(&title));
+    let file_path = format!("tmp/{}.mp3", sanitize_title(&title));
     get_song(&file_path, &url)?;
 
     Ok(file_path)

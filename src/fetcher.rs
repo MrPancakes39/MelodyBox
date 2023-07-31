@@ -2,6 +2,7 @@ use crate::USER_AGENT;
 
 use crate::errors::InfoError;
 use crate::structure::{LyricsEndpoint, NextEndpoint, PlaylistPanelVideoRenderer, TrackRun};
+use reqwest::Client;
 
 fn get_date() -> String {
     chrono::Utc::now().format("%Y%m%d").to_string()
@@ -94,12 +95,11 @@ fn parse_watch_track(track: &PlaylistPanelVideoRenderer) -> TrackInfo {
     tmp
 }
 
-pub async fn get_track_info(video_id: &str) -> Result<TrackInfo, InfoError> {
+pub async fn get_track_info(client: &Client, video_id: &str) -> Result<TrackInfo, InfoError> {
     let body = format!(
         r#"{{"enablePersistentPlaylistPanel":true,"isAudioOnly":true,"tunerSettingValue":"AUTOMIX_SETTING_NORMAL","videoId":"{video_id}","playlistId":"RDAMVM{video_id}","watchEndpointMusicSupportedConfigs":{{"watchEndpointMusicConfig":{{"hasPersistentPlaylistPanel":true,"musicVideoType":"MUSIC_VIDEO_TYPE_ATV"}}}},"context":{{"client":{{"clientName":"WEB_REMIX","clientVersion":"1.{}.01.00","hl":"en"}},"user":{{}}}}}}"#,
         get_date()
     );
-    let client = reqwest::Client::new();
     let resp = client
         .post("https://music.youtube.com/youtubei/v1/next?alt=json")
         .body(body)
@@ -155,7 +155,7 @@ pub struct Lyrics {
     pub source: Option<String>,
 }
 
-pub async fn get_lyrics_from_yt(info: &TrackInfo) -> color_eyre::Result<Lyrics> {
+pub async fn get_lyrics_from_yt(client: &Client, info: &TrackInfo) -> color_eyre::Result<Lyrics> {
     let lyrics_browse_id = match &info.lyrics_id {
         None => return Ok(Default::default()),
         Some(s) => s,
@@ -164,7 +164,6 @@ pub async fn get_lyrics_from_yt(info: &TrackInfo) -> color_eyre::Result<Lyrics> 
         r#"{{"browseId":"{lyrics_browse_id}","context":{{"client":{{"clientName":"WEB_REMIX","clientVersion":"1.{}.01.00","hl":"en"}},"user":{{}}}}}}"#,
         get_date()
     );
-    let client = reqwest::Client::new();
     let resp = client
         .post("https://music.youtube.com/youtubei/v1/browse?alt=json")
         .body(body)

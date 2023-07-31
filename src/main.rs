@@ -1,4 +1,4 @@
-// mod downloader;
+mod downloader;
 mod errors;
 mod fetcher;
 mod structure;
@@ -7,7 +7,7 @@ const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/201001
 const FFMPEG_PATH: &str = "/usr/bin/ffmpeg";
 
 use color_eyre::Result;
-// use downloader::download_song;
+use downloader::download_song;
 use fetcher::{get_lyrics_from_yt, get_track_info};
 
 fn prechecks() -> Result<()> {
@@ -32,20 +32,15 @@ fn prechecks() -> Result<()> {
 async fn main() -> Result<()> {
     color_eyre::install()?;
     prechecks()?;
-    // download_song("HoBGWhapaho").await?;
-    // download_song("I90KY3HNm0Y").await?;
-    // dbg!(&title, &file);
-    // get_lyrics_from_yt("HoBGWhapaho").await?;
-    // get_lyrics_from_yt("I90KY3HNm0Y").await?;
-    // let lyrics = get_lyrics_from_yt("z34enKCqRGk").await?;
-    // dbg!(lyrics);
-    // download_song("z34enKCqRGk").await?;
-    let info = get_track_info("z34enKCqRGk").await?;
+
+    let client = reqwest::Client::new();
+
+    let info = get_track_info(&client, "z34enKCqRGk").await?;
     dbg!(&info);
-    let lyrics = get_lyrics_from_yt(&info).await?;
+    let lyrics = get_lyrics_from_yt(&client, &info).await?;
     dbg!(&lyrics);
-    // dbg!(test_string("6".to_string()));
-    // dbg!(parse_year("2023".to_string()));
-    // dbg!(parse_duration("1:03:30".to_string()));
+    let path = download_song(&client, &info.video_id).await?;
+    dbg!(&path);
+
     Ok(())
 }
