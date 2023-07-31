@@ -1,14 +1,9 @@
-mod downloader;
-mod errors;
-mod fetcher;
-mod structure;
+mod ytmusic;
 
-const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
 const FFMPEG_PATH: &str = "/usr/bin/ffmpeg";
 
 use color_eyre::Result;
-use downloader::download_song;
-use fetcher::{get_lyrics_from_yt, get_track_info};
+use ytmusic::YTMusic;
 
 fn prechecks() -> Result<()> {
     use execute::Execute;
@@ -33,14 +28,13 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
     prechecks()?;
 
-    let client = reqwest::Client::new();
-
-    let info = get_track_info(&client, "z34enKCqRGk").await?;
+    let yt = YTMusic::new();
+    let info = yt.get_track_info("FJX0JPXD2nM").await?;
     dbg!(&info);
-    let lyrics = get_lyrics_from_yt(&client, &info).await?;
+    let lyrics = yt.get_lyrics(&info).await?;
     dbg!(&lyrics);
-    let path = download_song(&client, &info.video_id).await?;
-    dbg!(&path);
+    let path = yt.download_song(&info.video_id).await?;
+    println!("Path: {path:#}");
 
     Ok(())
 }

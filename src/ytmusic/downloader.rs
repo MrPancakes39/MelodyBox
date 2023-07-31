@@ -1,7 +1,6 @@
-const PIPED_BASE_API: &str = "https://piped-api.privacy.com.de";
-
+use super::errors::YoutubeError;
+use super::PIPED_BASE_API;
 use crate::FFMPEG_PATH;
-use crate::USER_AGENT;
 
 use execute::Execute;
 use reqwest::Client;
@@ -29,24 +28,15 @@ enum PipedResponse {
     Error { error: String },
 }
 
-use crate::errors::DownloadErrors;
-
-async fn get_stream_url(
-    client: &Client,
-    video_id: &str,
-) -> Result<(String, String), DownloadErrors> {
+async fn get_stream_url(client: &Client, video_id: &str) -> Result<(String, String), YoutubeError> {
     let url = format!("{PIPED_BASE_API}/streams/{video_id}");
-    let resp = client
-        .get(url)
-        .header("User-Agent", USER_AGENT)
-        .send()
-        .await?;
+    let resp = client.get(url).send().await?;
     let json = match resp.json::<PipedResponse>().await {
-        Err(_) => return Err(DownloadErrors::ParseError),
+        Err(_) => return Err(YoutubeError::ParseError),
         Ok(res) => res,
     };
     let song_info = match json {
-        PipedResponse::Error { error } => return Err(DownloadErrors::ApiError(error)),
+        PipedResponse::Error { error } => return Err(YoutubeError::ApiError(error)),
         PipedResponse::Success(info) => info,
     };
     let best_stream = song_info
@@ -54,7 +44,7 @@ async fn get_stream_url(
         .iter()
         .max_by(|s1, s2| s1.bitrate.cmp(&s2.bitrate));
     if best_stream.is_none() {
-        return Err(DownloadErrors::StreamError);
+        return Err(YoutubeError::StreamError);
     }
     Ok((song_info.title, best_stream.unwrap().url.clone()))
 }
@@ -74,7 +64,7 @@ fn sanitize_title(title: &str) -> String {
         .collect::<String>()
 }
 
-fn get_song(path: &str, url: &str) -> Result<(), DownloadErrors> {
+fn get_song(path: &str, url: &str) -> Result<(), YoutubeError> {
     let mut cmd = Command::new(FFMPEG_PATH);
     cmd.arg("-y"); // set overwrite output file to true
     cmd.arg("-i"); // set input file
@@ -86,10 +76,10 @@ fn get_song(path: &str, url: &str) -> Result<(), DownloadErrors> {
     cmd.arg("mp3"); // to mp3
     cmd.arg(path); // sets output file to path
     cmd.execute_check_exit_status_code(0)
-        .map_err(|_| DownloadErrors::DownloadFailed)
+        .map_err(|_| YoutubeError::DownloadFailed)
 }
 
-pub async fn download_song(client: &Client, video_id: &str) -> Result<String, DownloadErrors> {
+pub async fn download_song(client: &Client, video_id: &str) -> Result<String, YoutubeError> {
     let (title, url) = match get_stream_url(client, video_id).await {
         Err(err) => return Err(err),
         Ok(tup) => tup,

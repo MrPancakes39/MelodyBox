@@ -1,8 +1,9 @@
-use crate::USER_AGENT;
-
-use crate::errors::InfoError;
-use crate::structure::{LyricsEndpoint, NextEndpoint, PlaylistPanelVideoRenderer, TrackRun};
 use reqwest::Client;
+
+use super::{
+    errors::YoutubeError,
+    structure::{LyricsEndpoint, NextEndpoint, PlaylistPanelVideoRenderer, TrackRun},
+};
 
 fn get_date() -> String {
     chrono::Utc::now().format("%Y%m%d").to_string()
@@ -95,7 +96,7 @@ fn parse_watch_track(track: &PlaylistPanelVideoRenderer) -> TrackInfo {
     tmp
 }
 
-pub async fn get_track_info(client: &Client, video_id: &str) -> Result<TrackInfo, InfoError> {
+pub async fn get_track_info(client: &Client, video_id: &str) -> Result<TrackInfo, YoutubeError> {
     let body = format!(
         r#"{{"enablePersistentPlaylistPanel":true,"isAudioOnly":true,"tunerSettingValue":"AUTOMIX_SETTING_NORMAL","videoId":"{video_id}","playlistId":"RDAMVM{video_id}","watchEndpointMusicSupportedConfigs":{{"watchEndpointMusicConfig":{{"hasPersistentPlaylistPanel":true,"musicVideoType":"MUSIC_VIDEO_TYPE_ATV"}}}},"context":{{"client":{{"clientName":"WEB_REMIX","clientVersion":"1.{}.01.00","hl":"en"}},"user":{{}}}}}}"#,
         get_date()
@@ -103,13 +104,11 @@ pub async fn get_track_info(client: &Client, video_id: &str) -> Result<TrackInfo
     let resp = client
         .post("https://music.youtube.com/youtubei/v1/next?alt=json")
         .body(body)
-        .header("User-Agent", USER_AGENT)
-        .header("Content-Type", "application/json")
         .send()
         .await?;
 
     let json = match resp.json::<NextEndpoint>().await {
-        Err(_) => return Err(InfoError::ParseError),
+        Err(_) => return Err(YoutubeError::ParseError),
         Ok(ne) => ne,
     };
 
@@ -155,7 +154,7 @@ pub struct Lyrics {
     pub source: Option<String>,
 }
 
-pub async fn get_lyrics_from_yt(client: &Client, info: &TrackInfo) -> color_eyre::Result<Lyrics> {
+pub async fn get_lyrics_from_yt(client: &Client, info: &TrackInfo) -> Result<Lyrics, YoutubeError> {
     let lyrics_browse_id = match &info.lyrics_id {
         None => return Ok(Default::default()),
         Some(s) => s,
@@ -167,8 +166,6 @@ pub async fn get_lyrics_from_yt(client: &Client, info: &TrackInfo) -> color_eyre
     let resp = client
         .post("https://music.youtube.com/youtubei/v1/browse?alt=json")
         .body(body)
-        .header("User-Agent", USER_AGENT)
-        .header("Content-Type", "application/json")
         .send()
         .await?;
     let json = resp.json::<LyricsEndpoint>().await?;
