@@ -1,9 +1,9 @@
-mod ytmusic;
+mod musapi;
 
 const FFMPEG_PATH: &str = "/usr/bin/ffmpeg";
 
 use color_eyre::Result;
-use ytmusic::YTMusic;
+use musapi::MusicApiClient;
 
 fn prechecks() -> Result<()> {
     use execute::Execute;
@@ -28,12 +28,12 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
     prechecks()?;
 
-    let yt = YTMusic::new();
-    let info = yt.get_track_info("FJX0JPXD2nM").await?;
+    let client = MusicApiClient::new();
+    let info = client.get_track_info("FJX0JPXD2nM").await?;
     dbg!(&info);
-    let lyrics = yt.get_lyrics(&info).await?;
+    let lyrics = client.get_lyrics(&info).await?;
     dbg!(&lyrics);
-    let path = yt.download_song(&info.video_id).await?;
+    let path = client.download_song(&info.video_id).await?;
     println!("Path: {path:#}");
 
     Ok(())

@@ -1,7 +1,7 @@
 use reqwest::Client;
 
 use super::{
-    errors::YoutubeError,
+    errors::RequestorError,
     structure::{LyricsEndpoint, NextEndpoint, PlaylistPanelVideoRenderer, TrackRun},
 };
 
@@ -96,7 +96,7 @@ fn parse_watch_track(track: &PlaylistPanelVideoRenderer) -> TrackInfo {
     tmp
 }
 
-pub async fn get_track_info(client: &Client, video_id: &str) -> Result<TrackInfo, YoutubeError> {
+pub async fn get_track_info(client: &Client, video_id: &str) -> Result<TrackInfo, RequestorError> {
     let body = format!(
         r#"{{"enablePersistentPlaylistPanel":true,"isAudioOnly":true,"tunerSettingValue":"AUTOMIX_SETTING_NORMAL","videoId":"{video_id}","playlistId":"RDAMVM{video_id}","watchEndpointMusicSupportedConfigs":{{"watchEndpointMusicConfig":{{"hasPersistentPlaylistPanel":true,"musicVideoType":"MUSIC_VIDEO_TYPE_ATV"}}}},"context":{{"client":{{"clientName":"WEB_REMIX","clientVersion":"1.{}.01.00","hl":"en"}},"user":{{}}}}}}"#,
         get_date()
@@ -108,7 +108,7 @@ pub async fn get_track_info(client: &Client, video_id: &str) -> Result<TrackInfo
         .await?;
 
     let json = match resp.json::<NextEndpoint>().await {
-        Err(_) => return Err(YoutubeError::ParseError),
+        Err(_) => return Err(RequestorError::ParseError),
         Ok(ne) => ne,
     };
 
@@ -154,7 +154,10 @@ pub struct Lyrics {
     pub source: Option<String>,
 }
 
-pub async fn get_lyrics_from_yt(client: &Client, info: &TrackInfo) -> Result<Lyrics, YoutubeError> {
+pub async fn get_lyrics_from_yt(
+    client: &Client,
+    info: &TrackInfo,
+) -> Result<Lyrics, RequestorError> {
     let lyrics_browse_id = match &info.lyrics_id {
         None => return Ok(Default::default()),
         Some(s) => s,

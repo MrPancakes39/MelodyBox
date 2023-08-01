@@ -12,15 +12,15 @@ use self::downloader::*;
 use self::errors::*;
 use self::fetcher::*;
 
-pub struct YTMusic {
+pub struct MusicApiClient {
     client: Client,
 }
 
-impl YTMusic {
+impl MusicApiClient {
     pub fn new() -> Self {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Content-Type", "application/json".parse().unwrap());
-        YTMusic {
+        MusicApiClient {
             client: Client::builder()
                 .user_agent(USER_AGENT)
                 .default_headers(headers)
@@ -29,15 +29,15 @@ impl YTMusic {
         }
     }
 
-    pub async fn get_track_info(&self, video_id: &str) -> Result<TrackInfo, YoutubeError> {
+    pub async fn get_track_info(&self, video_id: &str) -> Result<TrackInfo, RequestorError> {
         get_track_info(&self.client, video_id).await
     }
 
-    pub async fn get_lyrics(&self, info: &TrackInfo) -> Result<Lyrics, YoutubeError> {
+    pub async fn get_lyrics(&self, info: &TrackInfo) -> Result<Lyrics, RequestorError> {
         get_lyrics_from_yt(&self.client, info).await
     }
 
-    pub async fn download_song(&self, video_id: &str) -> Result<String, YoutubeError> {
+    pub async fn download_song(&self, video_id: &str) -> Result<String, RequestorError> {
         download_song(&self.client, video_id).await
     }
 }

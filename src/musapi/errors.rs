@@ -1,5 +1,5 @@
 #[derive(Debug, thiserror::Error)]
-pub enum YoutubeError {
+pub enum RequestorError {
     #[error("There was an Error in doing the Request")]
     RequestError(reqwest::Error),
     #[error("Couldn't Parse JSON")]
@@ -12,7 +12,7 @@ pub enum YoutubeError {
     DownloadFailed,
 }
 
-impl From<reqwest::Error> for YoutubeError {
+impl From<reqwest::Error> for RequestorError {
     fn from(error: reqwest::Error) -> Self {
         Self::RequestError(error)
     }
