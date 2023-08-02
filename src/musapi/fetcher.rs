@@ -25,7 +25,7 @@ pub struct TrackInfo {
 fn parse_duration(duration: &str) -> Option<i32> {
     let vec = duration
         .split(':')
-        .map(|n| n.parse::<i32>())
+        .map(str::parse::<i32>)
         .collect::<Result<Vec<i32>, _>>()
         .ok()?;
     if vec.len() > 3 {
@@ -51,14 +51,14 @@ fn parse_song_runs(ti: &mut TrackInfo, runs: &[TrackRun]) {
             if id.starts_with("MPRE") || id.contains("release_detail") {
                 ti.album = Some(text.clone());
             } else {
-                ti.artists.push(text.clone())
+                ti.artists.push(text.clone());
             }
         } else {
             // text is a year
-            if run.text.len() == 4 && run.text.chars().all(char::is_numeric) {
+            if text.len() == 4 && text.chars().all(char::is_numeric) {
                 ti.year = text.parse::<i32>().ok();
             // duration skip
-            } else if run.text.contains(':') {
+            } else if text.contains(':') {
                 continue; // if length is None this is most likely None
             } else {
                 // views: start number alphanum space alphanum end
@@ -84,7 +84,7 @@ fn parse_watch_track(track: &PlaylistPanelVideoRenderer) -> TrackInfo {
         duration: track.length_text.as_ref().map(|l| l.runs[0].text.clone()),
         ..Default::default()
     };
-    tmp.duration_seconds = tmp.duration.as_ref().and_then(|d| parse_duration(d));
+    tmp.duration_seconds = tmp.duration.as_deref().and_then(parse_duration);
     tmp.thumbnail = track
         .thumbnail
         .thumbnails
