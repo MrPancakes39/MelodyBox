@@ -41,4 +41,22 @@ impl MusicApiClient {
     pub async fn download_song(&self, video_id: &str) -> Result<String, RequestorError> {
         download_song(&self.client, video_id).await
     }
+
+    pub async fn validate_video_id(&self, video_id: &str) -> Result<bool, RequestorError> {
+        #[derive(Debug, serde::Deserialize)]
+        struct StreamResponse {
+            error: Option<String>,
+        }
+
+        let url = format!("{PIPED_BASE_API}/streams/{video_id}");
+        let resp = self.client.get(url).send().await?;
+        let json = match resp.json::<StreamResponse>().await {
+            Err(_) => return Err(RequestorError::ParseError),
+            Ok(res) => res,
+        };
+        Ok(match json.error {
+            None => true,
+            Some(_) => false,
+        })
+    }
 }
