@@ -8,7 +8,7 @@ struct InfoParams {
 }
 
 async fn info_handler(Query(query): Query<InfoParams>) -> Html<&'static str> {
-    dbg!(&query);
+    log::info!("VideoID = {:?}", &query.videoId);
     Html("test")
 }
 
