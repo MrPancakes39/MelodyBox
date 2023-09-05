@@ -1,4 +1,4 @@
-// mod musapi;
+mod musapi;
 mod prestart;
 mod router;
 

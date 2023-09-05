@@ -1,4 +1,5 @@
 use reqwest::Client;
+use serde::Serialize;
 
 use super::{
     errors::RequestorError,
@@ -9,7 +10,7 @@ fn get_date() -> String {
     chrono::Utc::now().format("%Y%m%d").to_string()
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct TrackInfo {
     pub video_id: String,
     pub title: String,
