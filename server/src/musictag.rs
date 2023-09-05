@@ -1,6 +1,7 @@
 use id3::{frame, Tag, TagLike, Version};
 use std::path::Path;
 
+#[derive(Debug)]
 pub struct TagInfo {
     title: String,
     artist: String,
@@ -17,15 +18,15 @@ pub fn create_tag_info(
     lyrics: Option<(impl Into<String>, impl Into<String>)>,
     cover: Option<impl AsRef<Path>>,
     comment: Option<impl Into<String>>,
-) -> Result<TagInfo, std::io::Error> {
-    Ok(TagInfo {
+) -> TagInfo {
+    TagInfo {
         title: title.into(),
         artist: artist.into(),
         album: album.map(|s| s.into()),
         lyrics: lyrics.map(|(s1, s2)| (s1.into(), s2.into())),
         cover: cover.map(|path| std::fs::read(path).ok()).flatten(),
         comment: comment.map(|s| s.into()),
-    })
+    }
 }
 
 pub fn write_tags(path: impl AsRef<Path>, info: TagInfo) -> id3::Result<()> {

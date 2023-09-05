@@ -1,4 +1,5 @@
 mod musapi;
+mod musictag;
 mod prestart;
 mod router;
 
