@@ -4,7 +4,7 @@ mod fetcher;
 mod structure;
 
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
-const PIPED_BASE_API: &str = "https://piped-api.lunar.icu";
+const PIPED_BASE_API: &str = "https://pipedapi-libre.kavin.rocks";
 
 use reqwest::Client;
 
