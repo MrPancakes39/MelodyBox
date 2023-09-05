@@ -11,6 +11,7 @@ use reqwest::Client;
 use self::downloader::*;
 use self::errors::*;
 use self::fetcher::*;
+pub use self::fetcher::{Lyrics, TrackInfo};
 
 #[derive(Debug)]
 pub struct MusicApiClient {
