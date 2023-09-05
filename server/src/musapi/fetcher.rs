@@ -149,7 +149,7 @@ pub async fn get_track_info(client: &Client, video_id: &str) -> Result<TrackInfo
     Ok(track_info)
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct Lyrics {
     pub lyrics: Option<String>,
     pub source: Option<String>,
@@ -157,12 +157,9 @@ pub struct Lyrics {
 
 pub async fn get_lyrics_from_yt(
     client: &Client,
-    info: &TrackInfo,
+    lyrics_id: &str,
 ) -> Result<Lyrics, RequestorError> {
-    let lyrics_browse_id = match &info.lyrics_id {
-        None => return Ok(Default::default()),
-        Some(s) => s,
-    };
+    let lyrics_browse_id = lyrics_id;
     let body = format!(
         r#"{{"browseId":"{lyrics_browse_id}","context":{{"client":{{"clientName":"WEB_REMIX","clientVersion":"1.{}.01.00","hl":"en"}},"user":{{}}}}}}"#,
         get_date()

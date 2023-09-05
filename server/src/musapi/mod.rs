@@ -34,8 +34,8 @@ impl MusicApiClient {
         get_track_info(&self.client, video_id).await
     }
 
-    pub async fn get_lyrics(&self, info: &TrackInfo) -> Result<Lyrics, RequestorError> {
-        get_lyrics_from_yt(&self.client, info).await
+    pub async fn get_lyrics(&self, lyrics_id: &str) -> Result<Lyrics, RequestorError> {
+        get_lyrics_from_yt(&self.client, lyrics_id).await
     }
 
     pub async fn download_song(&self, video_id: &str) -> Result<String, RequestorError> {
