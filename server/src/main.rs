@@ -9,7 +9,7 @@ async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     prestart::prechecks()?;
 
-    let app = Router::new().route("/", get(hello));
+    let app = Router::new().route("/hello", get(hello));
 
     let addr: SocketAddr = "[::]:3000".parse()?;
     println!("listening on PORT {}", &addr.port());
@@ -21,5 +21,5 @@ async fn main() -> color_eyre::Result<()> {
 }
 
 async fn hello() -> Html<&'static str> {
-    Html("<h1>Hello, world</h1>")
+    Html("<h1>Hello World!</h1>")
 }
