@@ -1,5 +1,6 @@
 // mod musapi;
 mod prestart;
+mod router;
 
 use axum::{response::Html, routing::get, Router};
 use std::net::SocketAddr;
@@ -9,7 +10,9 @@ async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     prestart::prechecks()?;
 
-    let app = Router::new().route("/hello", get(hello));
+    let app = Router::new()
+        .merge(router::api_router())
+        .route("/hello", get(hello));
 
     let addr: SocketAddr = "[::]:3000".parse()?;
     println!("listening on PORT {}", &addr.port());
