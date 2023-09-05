@@ -12,6 +12,7 @@ use self::downloader::*;
 use self::errors::*;
 use self::fetcher::*;
 
+#[derive(Debug)]
 pub struct MusicApiClient {
     client: Client,
 }
