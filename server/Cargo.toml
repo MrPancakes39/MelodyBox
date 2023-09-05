@@ -19,6 +19,7 @@ serde_json = "1.0.104"
 simple_logger = "4.2.0"
 thiserror = "1.0.44"
 tokio = { version = "1.29.1", features = ["full"] }
+ulid = "1.0.1"
 
 [profile.release]
 opt-level = 3

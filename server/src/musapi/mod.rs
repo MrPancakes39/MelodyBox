@@ -38,8 +38,12 @@ impl MusicApiClient {
         get_lyrics_from_yt(&self.client, lyrics_id).await
     }
 
-    pub async fn download_song(&self, video_id: &str) -> Result<String, RequestorError> {
-        download_song(&self.client, video_id).await
+    pub async fn download_song(
+        &self,
+        video_id: &str,
+        gen_unique: bool,
+    ) -> Result<String, RequestorError> {
+        download_song(&self.client, video_id, gen_unique).await
     }
 
     pub async fn validate_video_id(&self, video_id: &str) -> Result<bool, RequestorError> {

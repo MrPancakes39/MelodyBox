@@ -6,6 +6,7 @@ use execute::Execute;
 use reqwest::Client;
 use serde::Deserialize;
 use std::process::Command;
+use ulid::Ulid;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -82,13 +83,22 @@ fn get_song(path: &str, url: &str) -> Result<(), RequestorError> {
         .map_err(|_| RequestorError::DownloadFailed)
 }
 
-pub async fn download_song(client: &Client, video_id: &str) -> Result<String, RequestorError> {
+pub async fn download_song(
+    client: &Client,
+    video_id: &str,
+    gen_unique: bool,
+) -> Result<String, RequestorError> {
     let (title, url) = match get_stream_url(client, video_id).await {
         Err(err) => return Err(err),
         Ok(tup) => tup,
     };
 
-    let file_path = format!("tmp/{}.mp3", sanitize_title(&title));
+    let file_name = match gen_unique {
+        true => format!("{}_{}", sanitize_title(&title), Ulid::new().to_string()),
+        false => sanitize_title(&title),
+    };
+
+    let file_path = format!("tmp/{}.mp3", file_name);
     get_song(&file_path, &url)?;
 
     Ok(file_path)
