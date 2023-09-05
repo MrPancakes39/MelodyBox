@@ -1,6 +1,9 @@
+use once_cell::sync::Lazy;
+use crate::musapi::MusicApiClient;
 use axum::{extract::Query, response::Html, routing::get, Router};
 use serde::Deserialize;
 
+const CLIENT: Lazy<MusicApiClient> = Lazy::new(|| MusicApiClient::new());
 #[derive(Debug, Deserialize)]
 struct InfoParams {
     #[allow(non_snake_case)]
