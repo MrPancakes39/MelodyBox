@@ -6,15 +6,14 @@ use serde::Deserialize;
 const CLIENT: Lazy<MusicApiClient> = Lazy::new(|| MusicApiClient::new());
 #[derive(Debug, Deserialize)]
 struct InfoParams {
-    #[allow(non_snake_case)]
-    videoId: String,
+    id: String,
 }
 
 async fn info_handler(Query(query): Query<InfoParams>) -> Html<&'static str> {
-    log::info!("VideoID = {:?}", &query.videoId);
+    log::info!("VideoID = {:?}", &query.id);
     Html("test")
 }
 
 pub fn api_router() -> Router {
-    Router::new().route("/info", get(info_handler))
+    Router::new().route("/api/info", get(info_handler))
 }
