@@ -3,10 +3,13 @@ use reqwest::StatusCode;
 
 use axum::{
     extract::Path,
-    response::IntoResponse,
+    http::header,
+    response::{AppendHeaders, IntoResponse},
     routing::{get, post},
     Json, Router,
 };
+use tokio::fs::File;
+use tokio::io::AsyncReadExt;
 
 use crate::musapi::MusicApiClient;
 use crate::musictag::{create_tag_info, write_tags};
@@ -57,7 +60,7 @@ async fn download_handler(
         _ => {}
     };
 
-    let file_path = match CLIENT.download_song(&sid, false).await {
+    let (file_path, org_name) = match CLIENT.download_song(&sid, true).await {
         Err(err) => return err.into_response(),
         Ok(path) => path,
     };
@@ -91,7 +94,18 @@ async fn download_handler(
         }
         _ => {}
     };
-    (StatusCode::OK, file_path).into_response()
+
+    let content_disp = format!("attachment; filename=\"{org_name}\"");
+    let headers = AppendHeaders([
+        (header::CONTENT_TYPE, "audio/mpeg"),
+        (header::CONTENT_DISPOSITION, &content_disp),
+    ]);
+
+    let mut f = File::open(file_path).await.unwrap();
+    let mut content = Vec::<u8>::new();
+    f.read_to_end(&mut content).await.unwrap();
+
+    (headers, content).into_response()
 }
 
 pub fn api_router() -> Router {

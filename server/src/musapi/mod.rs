@@ -6,10 +6,7 @@ mod structure;
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
 const PIPED_BASE_API: &str = "https://pipedapi-libre.kavin.rocks";
 
-use futures::StreamExt;
 use reqwest::Client;
-use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
 
 use self::downloader::*;
 use self::errors::*;
@@ -46,7 +43,7 @@ impl MusicApiClient {
         &self,
         video_id: &str,
         gen_unique: bool,
-    ) -> Result<String, RequestorError> {
+    ) -> Result<(String, String), RequestorError> {
         download_song(&self.client, video_id, gen_unique).await
     }
 

@@ -87,19 +87,21 @@ pub async fn download_song(
     client: &Client,
     video_id: &str,
     gen_unique: bool,
-) -> Result<String, RequestorError> {
+) -> Result<(String, String), RequestorError> {
     let (title, url) = match get_stream_url(client, video_id).await {
         Err(err) => return Err(err),
         Ok(tup) => tup,
     };
 
+    let sanitized_title = sanitize_title(&title);
+
     let file_name = match gen_unique {
-        true => format!("{}_{}", sanitize_title(&title), Ulid::new().to_string()),
-        false => sanitize_title(&title),
+        true => format!("{}_{}", sanitized_title, Ulid::new().to_string()),
+        false => sanitized_title.clone(),
     };
 
     let file_path = format!("tmp/{}.mp3", file_name);
     get_song(&file_path, &url)?;
 
-    Ok(file_path)
+    Ok((file_path, sanitized_title))
 }
