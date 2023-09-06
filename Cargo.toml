@@ -1,2 +1,6 @@
 [workspace]
 members = ["server", "client"]
+
+[profile.release]
+codegen-units = 1
+lto = true
