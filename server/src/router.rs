@@ -57,26 +57,41 @@ async fn download_handler(
         _ => {}
     };
 
-    let tag = create_tag_info(
-        body.info.title,
-        body.info.artists.join(", "),
-        body.info.album,
-        body.lyrics.lyrics.map(|text| ("eng", text)),
-        None::<String>,
-        Some(format!(
-            "This song was downloaded from: https://music.youtube.com/watch?v={sid}."
-        )),
-    );
-
     let file_path = match CLIENT.download_song(&sid, false).await {
         Err(err) => return err.into_response(),
         Ok(path) => path,
     };
 
-    let res = write_tags(file_path, tag);
-    dbg!(res);
-    // (StatusCode::OK, file_path).into_response()
-    StatusCode::OK.into_response()
+    let cover_path = match CLIENT
+        .download_cover(&file_path, &body.info.thumbnail)
+        .await
+    {
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Couldn't download cover image for song",
+            )
+                .into_response()
+        }
+        Ok(path) => path,
+    };
+
+    let tag = create_tag_info(
+        body.info.title,
+        body.info.artists.join(", "),
+        body.info.album,
+        body.lyrics.lyrics.map(|text| ("eng", text)),
+        Some(cover_path),
+        Some(format!(
+            "This song was downloaded from: https://music.youtube.com/watch?v={sid}."
+        )),
+    );
+
+    match write_tags(&file_path, tag) {
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        _ => {}
+    };
+    (StatusCode::OK, file_path).into_response()
 }
 
 pub fn api_router() -> Router {
