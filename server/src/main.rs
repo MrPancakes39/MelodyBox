@@ -5,6 +5,7 @@ mod router;
 
 use axum::{response::Html, routing::get, Router};
 use std::net::SocketAddr;
+use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -14,7 +15,8 @@ async fn main() -> color_eyre::Result<()> {
 
     let app = Router::new()
         .merge(router::api_router())
-        .route("/hello", get(hello));
+        .route("/hello", get(hello))
+        .layer(CorsLayer::permissive());
 
     let addr: SocketAddr = "[::]:3000".parse()?;
     log::info!("listening on PORT {}", &addr.port());
