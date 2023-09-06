@@ -1,0 +1,9 @@
+[package]
+name = "melodybox-client"
+version = "0.1.0-beta"
+edition = "2021"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]

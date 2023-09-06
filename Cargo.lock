@@ -700,6 +700,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed1202b2a6f884ae56f04cff409ab315c5ce26b5e58d7412e484f01fd52f52ef"
 
 [[package]]
+name = "melodybox-client"
+version = "0.1.0-beta"
+
+[[package]]
 name = "melodybox-server"
 version = "0.1.0-beta"
 dependencies = [
