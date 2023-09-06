@@ -59,10 +59,7 @@ impl MusicApiClient {
             Err(_) => return Err(RequestorError::ParseError),
             Ok(res) => res,
         };
-        Ok(match json.error {
-            None => true,
-            Some(_) => false,
-        })
+        Ok(json.error.is_none())
     }
 
     pub async fn download_cover(&self, url: &str) -> color_eyre::Result<Vec<u8>> {

@@ -14,7 +14,7 @@ use tokio::io::AsyncReadExt;
 use crate::musapi::MusicApiClient;
 use crate::musictag::{create_tag_info, write_tags};
 
-const CLIENT: Lazy<MusicApiClient> = Lazy::new(|| MusicApiClient::new());
+static CLIENT: Lazy<MusicApiClient> = Lazy::new(MusicApiClient::new);
 
 async fn info_handler(Path(sid): Path<String>) -> impl IntoResponse {
     log::debug!("SongID = {:?}", &sid);
@@ -87,12 +87,9 @@ async fn download_handler(
         )),
     );
 
-    match write_tags(&file_path, tag) {
-        Err(e) => {
-            log::error!("{:?}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-        _ => {}
+    if let Err(e) = write_tags(&file_path, tag) {
+        log::error!("{:?}", e);
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     };
 
     let content_disp = format!("attachment; filename=\"{org_name}\"");
