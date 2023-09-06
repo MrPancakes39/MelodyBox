@@ -16,7 +16,7 @@ pub fn create_tag_info(
     artist: impl Into<String>,
     album: Option<impl Into<String>>,
     lyrics: Option<(impl Into<String>, impl Into<String>)>,
-    cover: Option<impl AsRef<Path>>,
+    cover: Option<Vec<u8>>,
     comment: Option<impl Into<String>>,
 ) -> TagInfo {
     TagInfo {
@@ -24,7 +24,7 @@ pub fn create_tag_info(
         artist: artist.into(),
         album: album.map(|s| s.into()),
         lyrics: lyrics.map(|(s1, s2)| (s1.into(), s2.into())),
-        cover: cover.map(|path| std::fs::read(path).ok()).flatten(),
+        cover,
         comment: comment.map(|s| s.into()),
     }
 }

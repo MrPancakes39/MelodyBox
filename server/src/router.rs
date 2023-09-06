@@ -62,10 +62,7 @@ async fn download_handler(
         Ok(path) => path,
     };
 
-    let cover_path = match CLIENT
-        .download_cover(&file_path, &body.info.thumbnail)
-        .await
-    {
+    let cover_img = match CLIENT.download_cover(&body.info.thumbnail).await {
         Err(_) => {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -73,7 +70,7 @@ async fn download_handler(
             )
                 .into_response()
         }
-        Ok(path) => path,
+        Ok(data) => data,
     };
 
     let tag = create_tag_info(
@@ -81,14 +78,17 @@ async fn download_handler(
         body.info.artists.join(", "),
         body.info.album,
         body.lyrics.lyrics.map(|text| ("eng", text)),
-        Some(cover_path),
+        Some(cover_img),
         Some(format!(
             "This song was downloaded from: https://music.youtube.com/watch?v={sid}."
         )),
     );
 
     match write_tags(&file_path, tag) {
-        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Err(e) => {
+            log::error!("{:?}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
         _ => {}
     };
     (StatusCode::OK, file_path).into_response()
